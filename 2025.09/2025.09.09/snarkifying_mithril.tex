@@ -1,0 +1,137 @@
+\documentclass{article}
+% \documentclass[twocolumn]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tikz} 
+\usepackage{amsmath}
+\usepackage{booktabs}
+
+\newcommand{\mybox}[5]{
+    \begin{center}
+    \begin{tikzpicture}
+        \node[anchor=text,text width=\columnwidth+1.0cm, draw, rounded corners, line width=1pt, fill=#3, inner sep=5mm] (big) {\\#4};
+        \node[draw, rounded corners, line width=.5pt, fill=#2, anchor=west, xshift=5mm] (small) at (big.north west) {#1};
+    \end{tikzpicture}
+    % \caption{#5}
+    \end{center}
+}
+
+
+
+\title{25.9.9 Snarkifying Mithiril}
+
+\author{Wuyunsiqin \quad \quad Bingsheng Zhang \\ 
+Zhejiang University, CHN \\
+22521299@zju.edu.cn \quad bingsheng@zju.edu.cn}
+% \date{May 20 2025}
+
+
+
+
+\begin{document}
+
+\maketitle
+
+
+
+\section{Snarkifying Mithril(Theoretical)}
+
+
+\subsection{SNARK-based Mithril}
+
+
+\[
+\Pi_{\mathsf{F-Mithril}}
+= (\mathsf{Register},
+   \mathsf{EligibilityCheck}, \mathsf{CreateSig}, \mathsf{Verify},
+   \mathsf{Aggregate}, \mathsf{VerifyAggregate})
+\]
+
+\[
+\Pi_{\mathsf{SNARK-Mithril}}
+= (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey},
+   \mathsf{ACheck},
+   \mathsf{Sig}, \mathsf{ASig}, \mathsf{Aver})
+\]
+
+\paragraph{Mithril.Setup(\lambda)}
+\begin{align*}
+&(pp,m) \leftarrow \text{Setup}(1^\lambda)\\
+&\text{return } (pp,m) 
+\end{align*}
+
+\paragraph{Mithril.KGen(pp)}
+\begin{align*}
+&sk \leftarrow \mathbb{Z}_q \\
+&vk \leftarrow g_1^{sk} \\
+&\text{return } (sk, vk)
+\end{align*}
+
+\paragraph{Mithril.AKey(\textbf{vk}, \textbf{w})}
+\begin{align*}
+&\textbf{WVK} \leftarrow \{(w_i, vk_i) : i \in [n]\} \\
+% &w \leftarrow \sum_{i \in [n]} w_i\\
+&avk \leftarrow MT.\mathrm{Create}(\textbf{WVK}) \\
+&\text{return } avk
+\end{align*}
+
+\paragraph{Mithril.ACheck(avk,\textbf{vk}, \textbf{w}, \textbf{path})}
+\begin{align*}
+&\pi_1 \leftarrow \mathsf{SNARK.Prove}(pp, x = avk, w = (\textbf{vk}, \textbf{w}, \textbf{path})) \\
+&\quad (\mathcal{R} = \{(x = avk, w = (\textbf{VK}, \textbf{w}, \textbf{path}))\quad |\\ & \quad \ \ \forall i \in [m],\ MT.\mathrm{Check}(avk, (w_i, vk_i), path_i) = 1 \}) \\
+&\text{return } \pi_1
+\end{align*}
+
+% \paragraph{Mithril.AvkCheck(avk, srs)}
+
+% \begin{align*}
+% &\text{return } \mathsf{SNARK.Verify}(srs, x = avk,\pi_1)
+% \end{align*}
+
+% \paragraph{Mithril.Sig(vk, w, \texttt{sk, j, m})}
+% \begin{align*}
+% % &\sigma \leftarrow \mathrm{BLS.Sign}(sk, (j|| msg|| w|| w_{i})) \\
+% &\text{On EligibilityCheck(m, j) is 1,}\\
+% &\sigma \leftarrow \mathrm{BLS.Sign}(sk, m) \\
+% &\text{return } \sigma
+% \end{align*}
+
+\paragraph{Mithril.Sig(vk, w,$\texttt{sk, j, m})$ (To Do)}
+\begin{align*}
+&\text{let } \textit{topic} \leftarrow "0" \parallel avk \parallel m.\mathsf{topic}\\
+&\sigma_{topic} \leftarrow \mathrm{BLS.Sign}(sk,\ \textit{topic})\\
+&ev \leftarrow \mathrm{MSP.Eval}(\textit{topic},\ j,\ \sigma_{topic})\\
+&\mathbf{if}\ ev < \phi(w)\ \mathbf{then}\\
+&\qquad \sigma_{\mathsf{body}} \leftarrow \mathrm{BLS.Sign}(sk,\ "1" \parallel \textit{topic} \parallel m.\mathsf{body})\\
+&\qquad \textbf{return}\ \sigma \\
+&\mathbf{else}\ \textbf{return}\ \bot
+\end{align*}
+
+
+\paragraph{Mithril.ASig( vk, w, m, S=$\{(\sigma_j,vk_j) | j\  \in\  [k]\}$)}
+\begin{align*}
+&\boldsymbol{\sigma} \leftarrow [\{\sigma_j | j\  \in\  [k]\}] \\
+&e_{\sigma} \leftarrow H_p(\boldsymbol{\sigma}) \\
+&e_j \leftarrow H_\lambda(j, e_{\sigma}) \\
+&\mu \leftarrow \prod_j \sigma_j^{e_j} \\
+&\pi_2 \leftarrow SNARK.Prove(srs,x=(\mu, e_{\sigma}),w=(\boldsymbol{\sigma})) \\
+&\quad (R = \{x=(\mu, e_{\sigma},,w),w=(\boldsymbol{\sigma})\quad|\quad \\
+&\quad \ \ e_{\sigma} = H_p(\boldsymbol{\sigma}) \land e_j = H_\lambda(j, e_{\sigma}) \land \mu = \prod_j \sigma_j^{e_j} \})\\ 
+% &\quad \ \ \land BLS.Ver(avk,\mu,ivk)\}\\
+&\tau \leftarrow (\mu, e_{\sigma},\pi_2) \\
+&\text{return } \tau 
+\end{align*}
+
+\paragraph{Mithril.AVer(avk, m, \tau , w)(To Do: Check \pi)}
+\begin{align*}
+% &r_1 \leftarrow \mathsf{SNARK.Verify}(srs, x = (\mu, e_{\sigma}),\pi_2)\\
+% &r_2 \leftarrow \mathsf{BLS.Ver}(ivk,\mu,m) \\
+% &\textbf{return}\quad r_1 \land r_2
+&b \leftarrow \mathsf{BLS.Ver}(ivk,\mu,m) \\
+&\textbf{return}\quad b
+\end{align*}
+
+(Here, ivk = $\prod_j vk_j^{e_j}$)
+
+(To Do: Check k)
+
+\end{document}

@@ -1,0 +1,807 @@
+\documentclass{article}
+% \documentclass[twocolumn]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tikz} 
+\usepackage{amsmath}
+\usepackage{booktabs}
+
+\newcommand{\mybox}[5]{
+    \begin{center}
+    \begin{tikzpicture}
+        \node[anchor=text,text width=\columnwidth+1.0cm, draw, rounded corners, line width=1pt, fill=#3, inner sep=5mm] (big) {\\#4};
+        \node[draw, rounded corners, line width=.5pt, fill=#2, anchor=west, xshift=5mm] (small) at (big.north west) {#1};
+    \end{tikzpicture}
+    % \caption{#5}
+    \end{center}
+}
+
+
+
+\title{25.6.3 bridge doc discussion}
+\author{Wuyunsiqin \quad \quad Bingsheng Zhang \\ 
+Zhejiang University, CHN \\
+3210101763@zju.edu.cn \quad bingsheng@zju.edu.cn}
+\date{May 20 2025}
+
+
+
+
+\begin{document}
+
+\maketitle
+
+\section{Bridge Description}
+
+
+% zkBridge: ATMS / Mithril-based
+
+% \paragraph{Setup$_{i,j}()$}
+% Returns $\mathsf{Snark.Setup}()$.
+
+% \paragraph{KGen$_{i,j}()$}
+% Returns $\mathsf{ATMS.Gen()}$ or $\mathsf{Mithril.Gen()}$ for key generation, depending on the underlying signature scheme.
+
+% \paragraph{RoT$_{i,j}(\mathsf{crs}_{i,j}, \mathsf{vks}_{i,j}, C_i, C_j)$}
+% Returns $(\mathsf{rot}_{i,j}, \mathsf{aux}_{i,j})$ where $\mathsf{rot}_{i,j} \leftarrow (\mathsf{crs}_{i,j}, \mathsf{vks}_{i,j})$, and $\mathsf{aux}_{i,j}$ stores necessary public keys.
+
+% \paragraph{Br$_{i,j}(r, m; C_i, C_j; bst)$}
+% Let $cpl \leftarrow \lfloor r/\Delta_i \rfloor$, $h \leftarrow \mathsf{Header}_i(C_i, cpl)$. Sample a committee $S \subseteq \mathsf{vks}_{i,j}$ of size $t$. Let $\sigma_S$ be the set of partial signatures on $(cpl, h)$.
+
+% \begin{itemize}
+%   \item In ATMS, compute $\sigma \leftarrow \mathsf{ASig}(VK, (cpl, h), \{(vk_i, \sigma_i)\}_{i \in S})$
+%   \item In Mithril, compute $\sigma \leftarrow \mathsf{Aggregate}(\{\sigma_i\}_{i \in S})$ and $\mathsf{avk} \leftarrow \mathsf{AKey}(VK)$
+% \end{itemize}
+
+% Output $\mathsf{btx}_j \leftarrow (cID, \mathsf{update}, cpl, h, \mathsf{avk}, \sigma)$.
+% Return $(\bot, \mathsf{btx}_j, \varepsilon; bst)$
+
+% \paragraph{Header$_i(C, cpl)$}
+% Return $h \leftarrow \mathsf{Hash}(\mathsf{L}_i(C) \text{ up to } cpl)$.
+
+% \paragraph{Certify$_{i,j}(\mathsf{rot}_{i,j}, r, x, C)$}
+% Let $cpl \leftarrow \lfloor r/\Delta_i \rfloor$, $h \leftarrow \mathsf{Header}_i(C, cpl)$.
+% Generate $\pi \leftarrow \mathsf{Snark.Prove}(\mathsf{crs}_{i,j}, (cpl, x, h), C)$.
+% Return $(cpl, \pi)$.
+
+% \paragraph{GetVerData$_{i,j}(\mathsf{genesis}_j, \mathsf{rot}_{i,j}, L_j)$}
+% Extract memory state from bridge contract deployed on $\mathsf{Ledger}_j$.
+% Return $\mathsf{mem}$.
+
+% \paragraph{Verify$_{i,j}(\mathsf{mem}, x, (cpl, \pi))$}
+% Parse $(cpl, h)$ from memory or transaction context.
+% Return $\mathsf{Snark.Verify}(\mathsf{crs}_{i,j}, (cpl, x, h), \pi)$.
+
+% \paragraph{Contract ZKBridge[$\mathsf{rot}_{i,j}$]}
+
+% \begin{itemize}
+%   \item $\mathsf{update}(cpl, h, avk, \sigma)$:
+%     \begin{itemize}
+%       \item Check that $\mathsf{ACheck}(VK, avk) = 1$ or $\mathsf{avk}$ in known set.
+%       \item Verify $\mathsf{AVer}(avk, (cpl, h), \sigma, t) = 1$.
+%       \item If verified, update memory with $(cpl, h)$.
+%     \end{itemize}
+%   \item $\mathsf{verify}(x, \pi)$:
+%     \begin{itemize}
+%       \item If $\mathsf{Snark.Verify}(\cdot) = 1$, write $(\mathsf{ok}, x, \pi)$ to memory.
+%     \end{itemize}
+% \end{itemize}
+
+
+
+
+
+% zkBridge: ATMS / Mithril-based
+
+
+
+\subsection{Mithril Bridge}
+
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+\paragraph{Setup$_{i,j}()$}
+\begin{itemize}
+  \item return $\mathsf{Mithril.PGen()}$
+\end{itemize}
+
+\paragraph{KGen$_{i,j}(pp_{i,j})$}
+\begin{itemize}
+  \item return $\mathsf{Mithril.KGen}(pp_{i,j})$
+\end{itemize}
+
+\paragraph{RoT$_{i,j}(pp_{i,j}, \mathsf{vks}_{i,j}, C_i, C_j)$}
+\begin{itemize}
+  \item $[\mathsf{vk}_P : P \in P_{i,j}] \leftarrow \mathsf{parse}(\mathsf{keys}_{i,j})$
+  \item $\mathsf{avk} \leftarrow \mathsf{Mithril.Avk}(pp_{i,j}, [\mathsf{vk}_P : P \in P_{i,j}])$
+  \item $\mathsf{nonce} \leftarrow \mathsf{Beacon}(C_i)$
+  \item put $\mathsf{nonce}$ in $\mathsf{bst}$
+  \item get $\mathsf{SD}$ from $C_i$
+  \item $\mathsf{rot}_{i,j} \leftarrow (\mathsf{avk}, \mathsf{SD})$
+  \item $\mathsf{aux}_{i,j} \leftarrow (\mathsf{rot}_{i,j}, [\mathsf{vk}_P : P \in P_{i,j}])$
+  \item return $(\mathsf{rot}_{i,j}, \mathsf{aux}_{i,j})$
+\end{itemize}
+
+}}
+
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r = 0$}
+\begin{itemize}
+  \item get $\mathsf{rot}_{i,j}$ from $\mathsf{bst}$
+  \item $\mathsf{code} \leftarrow \mathsf{MITHBridge}[\mathsf{rot}_{i,j}].\mathsf{code}$
+  \item $cID \leftarrow \mathsf{Hash}(\mathsf{code})$
+  \item $\mathsf{btx}_j \leftarrow (cID, (\mathsf{code}, \mathsf{mem} := \varepsilon))$
+  \item return $(\bot, \mathsf{btx}_j, \bot; \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r \in [1, e-1]$}
+\begin{itemize}
+  \item return $(\bot, \bot, \bot; \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r = ke - \Delta - 1$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item get $(P, \mathsf{sk})$ from $\mathsf{bst}$
+  \item get $pp_{i,j}$ from $\mathsf{bst}$
+  \item $(\mathsf{sk}', \mathsf{vk}') \leftarrow \mathsf{Mithril.KGen}(pp_{i,j})$
+  \item put $\mathsf{sk}$ in $\mathsf{bst}$
+  \item $\sigma' \leftarrow \mathsf{DS.Sig}(\mathsf{sk}, \mathsf{vk}')$
+  \item return $(\bot, \bot, (P, \mathsf{vk}', \sigma'); \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r \in [ke - \Delta, ke - 1]$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item put $m$ in $\mathsf{bst}$
+  \item return $(\bot, \bot, \bot; \mathsf{bst})$
+\end{itemize}
+
+}}
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r = ke$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item get $(P, \mathsf{sk})$ from $\mathsf{bst}$
+  \item get $[\mathsf{vk}'_P : P \in P_{i,j}]$ from $\mathsf{bst}$
+  \item $\mathsf{VK}' \leftarrow [\mathsf{vk}'_P : P \in P_{i,j} \wedge \mathsf{DS.Ver}(\mathsf{vk}_P, \mathsf{vk}'_P) = 1]$
+  \item $\mathsf{avk}' \leftarrow \mathsf{Mithril.Avk}(pp_{i,j}, \mathsf{VK}')$
+  \item get $\mathsf{SD}'$ from $C_i$ at end of round $r = ke$
+  \item $\mathsf{cpl} \leftarrow \lfloor r / \Delta_i \rfloor$
+  \item $h \leftarrow \mathsf{Hash}(L_i(C_i \text{ up to } \mathsf{cpl}))$
+  \item $\mathsf{nonce}' \leftarrow \mathsf{Beacon}(C_i \text{ round } r)$
+  \item get $\mathsf{nonce}$ from $\mathsf{bst}$
+  \item $\mathsf{msg.topic} \leftarrow r$
+  \item $\mathsf{msg.body} \leftarrow (\mathsf{cpl}, h, \mathsf{SD}', \mathsf{avk}', \mathsf{nonce}')$
+  \item put $\mathsf{msg}$ in $\mathsf{bst}$
+  \item get $\mathsf{SD}$ from $C_i$ for round $(k - 1)e$
+  \item compute $w$ using $\mathsf{SD}$
+  \item get $w_i$ from $\mathsf{SD}$
+  \item $m \leftarrow [\ ]$
+  \item for $j^* \in [m]$:
+  \begin{itemize}
+    \item $\sigma \leftarrow \mathsf{Mithril.Sig}(\mathsf{sk}, j^*, \mathsf{msg}, w_i, w)$
+    \item if $\sigma \ne \bot$: $m \leftarrow m : (\mathsf{vk}_P, j^*, \sigma)$
+  \end{itemize}
+  \item if $m = [\ ]$: $m \leftarrow \bot$
+  \item return $(\bot, \bot, m; \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r \in [ke + 1, ke + \Delta - 1]$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item put $m$ in $\mathsf{bst}$
+  \item return $(\bot, \bot, \bot; \mathsf{bst})$
+\end{itemize}
+
+}}
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r = ke + \Delta$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item put $m$ in $\mathsf{bst}$
+  \item get $\mathsf{msg}$ from $\mathsf{bst}$
+  \item get $[\mathsf{vk}_P : P \in P_{i,j}]$ from $\mathsf{bst}$
+  \item get $\mathsf{SD}$ from $C_i$ for round $r = ke$
+  \item get $\mathsf{VK}$ from $\mathsf{bst}$
+  \item form $\mathbf{WVK}$ from $\mathsf{SD}$ and $\mathsf{VK}$
+  \item compute $w$ using $\mathsf{SD}$
+  \item get $w_i$ from $\mathsf{SD}$
+  \item get $T := [(\mathsf{vk}, j^*, \sigma)]$ from $\mathsf{bst}$
+  \item $S \leftarrow [(\mathsf{vk}, j^*, \sigma) \in T : \mathsf{Mithril.Ver}(\mathsf{vk}, j^*, \mathsf{msg}, \sigma, w_i, w)]$
+  \item $\sigma^* \leftarrow \mathsf{Mithril.ASig}(\mathbf{WVK}, \mathsf{msg}, S)$
+  \item return $(\bot, (cID, (\mathsf{msg}, \sigma^*)), \bot; \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r \in [ke + \Delta + 1, (k+1)e - 1]$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item return $(\bot, \bot, \bot; \mathsf{bst})$
+\end{itemize}
+
+}}
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+
+\paragraph{GetVerData$_{i,j}(\mathsf{genesis}_j, \mathsf{rot}_{i,j}, L_j)$}
+\begin{itemize}
+  \item $\mathsf{LS} \leftarrow \mathsf{ledgerState}_j[\mathsf{genesis}_j](L_j)$
+  \item $cID \leftarrow \mathsf{Hash}(\mathsf{MITHBridge}[\mathsf{rot}_{i,j}].\mathsf{code})$
+  \item $(\_, \mathsf{mem}, \_) \leftarrow \mathsf{LS}[cID]$
+  \item return $\mathsf{mem}$
+\end{itemize}
+
+\paragraph{$\mathcal{R}^*_{i,j}((\mathsf{cpl}, x, h), C)$}
+\begin{itemize}
+  \item return $(\mathsf{Header}_i(C, \mathsf{cpl}) = h \land \mathcal{R}_{i,j}(x, L_i(C) \text{ up to } \mathsf{cpl}))$
+\end{itemize}
+
+\paragraph{Certify$_{i,j}(\mathsf{rot}_{i,j}, x, C_i)$}
+\begin{itemize}
+  \item get $\mathsf{crs}_{i,j}$ from $\mathsf{rot}_{i,j}$
+  \item $\mathsf{cpl} \leftarrow \lfloor r / \Delta_i \rfloor$
+  \item $h \leftarrow \mathsf{Header}_i(C, \mathsf{cpl})$
+  \item $\pi \leftarrow \mathsf{Snark.Prove}(\mathsf{crs}_{i,j}, (\mathsf{cpl}, x, h), C)$
+  \item return $(\mathsf{cpl}, \pi)$
+\end{itemize}
+
+\paragraph{Verify$_{i,j}(\mathsf{mem}, x, \pi)$}
+\begin{itemize}
+  \item get $\mathsf{crs}_{i,j}$ from $\mathsf{mem}$
+  \item get list of $h$ from $\mathsf{mem}$ for the $\mathsf{cpl}$
+  \item return $\mathsf{Snark.Verify}(\mathsf{crs}_{i,j}, (\mathsf{cpl}, x, h), \pi)$
+\end{itemize}
+
+}}
+
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+\paragraph{Contract MITHBridge[$\mathsf{rot}_{i,j}$]}
+
+
+\textbf{update}$(\mathsf{msg}, \sigma)$:
+\begin{itemize}
+  \item get latest $\mathsf{avk}$ from $\mathsf{mem}$
+  \item if $\mathsf{avk} = \bot$: get $\mathsf{avk}$ from $\mathsf{rot}_{i,j}$
+  \item $(\mathsf{cpl}, h, \mathsf{SD}, \mathsf{avk}, \mathsf{nonce}) \leftarrow \mathsf{msg.body}$
+  \item get $w$ from $\mathsf{SD}$
+  \item check $\mathsf{Mithril.AVer}(\mathsf{avk}, \mathsf{msg}, \sigma, w)$
+  \item $\mathsf{mem} \leftarrow \mathsf{mem} : (\mathsf{cpl}, h, \mathsf{SD}, \mathsf{avk}, \mathsf{nonce})$
+\end{itemize}
+
+\textbf{verify}$(x, \pi)$:
+\begin{itemize}
+  \item if $\mathsf{Verify}_{i,j}(\mathsf{mem}, x, \pi)$: put $(\mathsf{ok}, x, \pi)$ in $\mathsf{mem}$
+\end{itemize}
+
+}}
+
+
+% \subsection{ZK Bridge}
+
+% \paragraph{Setup$_{i,j}()$}
+% \begin{itemize}
+%   \item $\mathsf{crs} \leftarrow \mathsf{Snark.CRS}()$
+%   \item $pp_{i,0} \leftarrow \mathsf{Setup}_{i,0}()$
+%   \item return $(\mathsf{crs}, pp_{i,0})$
+% \end{itemize}
+
+% \paragraph{KGen$_{i,j}(pp_{i,j})$}
+% \begin{itemize}
+%   \item $(\mathsf{crs}, pp_{i,0}) \leftarrow pp_{i,j}$
+%   \item return $\mathsf{KGen}_{i,0}(pp_{i,0})$
+% \end{itemize}
+
+% \paragraph{RoT$_{i,j}(pp_{i,j}, \mathsf{vks}_{i,j}, C_i, C_j)$}
+% \begin{itemize}
+%   \item $(\mathsf{crs}, pp_{i,0}) \leftarrow pp_{i,j}$
+%   \item $\mathsf{vks}_{i,0} \leftarrow \mathsf{vks}_{i,j}$
+%   \item $C_0 \leftarrow \varepsilon$
+%   \item $(\mathsf{rot}_{i,0}, \mathsf{aux}_{i,0}) \leftarrow \mathsf{RoT}_{i,0}(pp_{i,0}, \mathsf{vks}_{i,0}, C_i, C_0)$
+%   \item $\mathsf{rot}_{i,j} \leftarrow (\mathsf{crs}, \mathsf{rot}_{i,0})$
+%   \item $\mathsf{aux}_{i,j} \leftarrow (\mathsf{crs}, \mathsf{aux}_{i,0})$
+%   \item return $(\mathsf{rot}_{i,j}, \mathsf{aux}_{i,j})$
+% \end{itemize}
+
+% \paragraph{Br$_{i,j}(r, m; C_i, C_j; bst)$ when $r = 0$}
+% \begin{itemize}
+%   \item get $\mathsf{rot}_{i,j}$ from $bst$
+%   \item $\mathsf{code} \leftarrow \mathsf{ZKBridge}[\mathsf{rot}_{i,j}]$
+%   \item $cID \leftarrow \mathsf{Hash}(\mathsf{code})$
+%   \item $\mathsf{btx}_j \leftarrow (cID, (\mathsf{code}, \varepsilon))$
+%   \item return $(\bot, \mathsf{btx}_j, \bot; bst)$
+% \end{itemize}
+
+% \paragraph{$\mathcal{R}^*((st, st'), \mathsf{btx}_j)$}  %\textit{// used in Snark}
+% \begin{itemize}
+%   \item return $(st' = \prod_0^{Val_0}(\_, \mathsf{btx}_j, \_; st))$
+% \end{itemize}
+
+% \paragraph{Br$_{i,j}(r, m; C_i, C_j; bst)$ when $r \geq 1$}
+% \begin{itemize}
+%   \item $(\mathsf{btx}_i, \mathsf{btx}_j, m; bst) \leftarrow \mathsf{Br}_{i,0}(r - 1, m; C_i, C_0; bst)$
+%   \item get $st$ from $bst$
+%   \item $st' \leftarrow \prod_0^{Val_0}(\_, \mathsf{btx}_j, \_; st)$
+%   \item get $\mathsf{crs}$ from $bst$
+%   \item $\pi \leftarrow \mathsf{Snark.Proof}(\mathsf{crs}, (st, st'), \mathsf{btx}_j)$
+%   \item put $st'$ in $bst$
+%   \item $\mathsf{btx}'_j \leftarrow (cID, \mathsf{update}, (st', \pi))$
+%   \item return $(\mathsf{btx}_i, \mathsf{btx}'_j, m; bst)$
+% \end{itemize}
+
+% \paragraph{GetVerData$_{i,j}(\mathsf{genesis}_j, \mathsf{rot}_{i,j}, L_j)$}
+% \begin{itemize}
+%   \item get $L_0$ from $L_j$
+%   \item $\mathsf{rot}_{i,0} \leftarrow \mathsf{rot}_{i,j}; \quad \mathsf{genesis}_0 \leftarrow \varepsilon$
+%   \item $\mathsf{mem} \leftarrow \mathsf{GetVerData}_{i,0}(\mathsf{genesis}_0, \mathsf{rot}_{i,0}, L_0)$
+%   \item return $\mathsf{mem}$
+% \end{itemize}
+
+% \paragraph{$\mathcal{R}_{i,j}(x, L_i)$}
+% \begin{itemize}
+%   \item return $\mathcal{R}_{i,0}(x, L_i)$
+% \end{itemize}
+
+% \paragraph{Certify$_{i,j}(\mathsf{rot}_{i,j}, r, x, C)$}
+% \begin{itemize}
+%   \item $\mathsf{rot}_{i,0} \leftarrow \mathsf{rot}_{i,j}$
+%   \item return $\mathsf{Certify}_{i,0}(\mathsf{rot}_{i,0}, r, x, C)$
+% \end{itemize}
+
+% \paragraph{Verify$_{i,j}(\mathsf{mem}, x, \pi)$}
+% \begin{itemize}
+%   \item return $\mathsf{Verify}_{i,0}(\mathsf{mem}, x, \pi)$
+% \end{itemize}
+
+% \paragraph{Contract ZKBridge[$\mathsf{rot}_{i,j}$]}
+
+% \textbf{update}$(st', \pi)$:
+% \begin{itemize}
+%   \item get $st$ from $\mathsf{mem}$
+%   \item get $\mathsf{crs}$ from $\mathsf{rot}_{i,j}$
+%   \item check $\mathsf{Snark.Verify}(\mathsf{crs}, (st', st), \pi)$
+%   \item put $st'$ in $\mathsf{mem}$
+% \end{itemize}
+
+% \textbf{verify}$(x, \pi)$:
+% \begin{itemize}
+%   \item get $L_0$ from $L_j$
+%   \item $\mathsf{rot}_{i,0} \leftarrow \mathsf{rot}_{i,j}; \quad \mathsf{genesis}_0 \leftarrow \varepsilon$
+%   \item $\mathsf{mem} \leftarrow \mathsf{GetVerData}_{i,0}(\mathsf{genesis}_0, \mathsf{rot}_{i,0}, L_0)$
+%   \item if $\mathsf{Verify}_{i,j}(\mathsf{mem}, x, \pi)$: put $(\mathsf{ok}, x, \pi)$ in $\mathsf{mem}$
+% \end{itemize}
+
+
+
+\subsection{Mithril-Based zkBridge (SNARK Version)}
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+\paragraph{Setup$_{i,j}()$}
+\begin{itemize}
+\item $pp \leftarrow \mathsf{Mithril.PGen}()$
+\item $\mathsf{crs} \leftarrow \mathsf{Snark.Setup}()$
+\item return $(\mathsf{crs}, pp)$
+\end{itemize}
+
+\paragraph{KGen$_{i,j}(pp_{i,j})$}
+\begin{itemize}
+\item return $\mathsf{Mithril.KGen}(pp_{i,j})$
+\end{itemize}
+
+\paragraph{RoT$_{i,j}(pp_{i,j}, \mathsf{vks}_{i,j}, C_i, C_j)$}
+\begin{itemize}
+\item $[\mathsf{vk}_P : P \in P_{i,j}] \leftarrow \mathsf{parse}(\mathsf{keys}_{i,j})$
+\item $\mathsf{avk} \leftarrow \mathsf{Mithril.Avk}(pp\_{i,j}, [\mathsf{vk}_P : P \in \textbf{P}_{i,j}])$
+\item $\mathsf{nonce} \leftarrow \mathsf{Beacon}(C_i)$
+\item get $\mathsf{SD}$ from $C_i$
+\item $\mathsf{rot}_{i,j} \leftarrow (\mathsf{avk}, \mathsf{SD}, \mathsf{crs})$
+\item $\mathsf{aux}_{i,j} \leftarrow (\mathsf{rot}_{i,j}, [\mathsf{vk}_P : P \in \textbf{P}_{i,j}])$
+\item return $(\mathsf{rot}_{i,j}, \mathsf{aux}_{i,j})$
+\end{itemize}
+
+}}
+
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r = 0$}
+\begin{itemize}
+  \item get $\mathsf{rot}_{i,j}$ from $\mathsf{bst}$
+  \item $\mathsf{code} \leftarrow \mathsf{MITHBridge}[\mathsf{rot}_{i,j}].\mathsf{code}$
+  \item $cID \leftarrow \mathsf{Hash}(\mathsf{code})$
+  \item $\mathsf{btx}_j \leftarrow (cID, (\mathsf{code}, \mathsf{mem} := \varepsilon))$
+  \item return $(\bot, \mathsf{btx}_j, \bot; \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r \in [1, e-1]$}
+\begin{itemize}
+  \item return $(\bot, \bot, \bot; \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r = ke - \Delta - 1$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item get $(P, \mathsf{sk})$ from $\mathsf{bst}$
+  \item get $pp_{i,j}$ from $\mathsf{bst}$
+  \item $(\mathsf{sk}', \mathsf{vk}') \leftarrow \mathsf{Mithril.KGen}(pp_{i,j})$
+  \item put $\mathsf{sk}$ in $\mathsf{bst}$
+  \item $\sigma' \leftarrow \mathsf{DS.Sig}(\mathsf{sk}, \mathsf{vk}')$
+  \item return $(\bot, \bot, (P, \mathsf{vk}', \sigma'); \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r \in [ke - \Delta, ke - 1]$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item put $m$ in $\mathsf{bst}$
+  \item return $(\bot, \bot, \bot; \mathsf{bst})$
+\end{itemize}
+
+}}
+
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r = ke$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item get $(P, \mathsf{sk})$ from $\mathsf{bst}$
+  \item get $[\mathsf{vk}'_P : P \in P_{i,j}]$ from $\mathsf{bst}$
+  \item $\mathsf{VK}' \leftarrow [\mathsf{vk}'_P : P \in P_{i,j} \wedge \mathsf{DS.Ver}(\mathsf{vk}_P, \mathsf{vk}'_P) = 1]$
+  \item $\mathsf{avk}' \leftarrow \mathsf{Mithril.Avk}(pp_{i,j}, \mathsf{VK}')$
+  \item get $\mathsf{SD}'$ from $C_i$ at end of round $r = ke$
+  \item $\mathsf{cpl} \leftarrow \lfloor r / \Delta_i \rfloor$
+  \item $h \leftarrow \mathsf{Hash}(L_i(C_i \text{ up to } \mathsf{cpl}))$
+  \item $\mathsf{nonce}' \leftarrow \mathsf{Beacon}(C_i \text{ round } r)$
+  \item get $\mathsf{nonce}$ from $\mathsf{bst}$
+  \item $\mathsf{msg.topic} \leftarrow r$
+  \item $\mathsf{msg.body} \leftarrow (\mathsf{cpl}, h, \mathsf{SD}', \mathsf{avk}', \mathsf{nonce}')$
+  \item put $\mathsf{msg}$ in $\mathsf{bst}$
+  \item get $\mathsf{SD}$ from $C_i$ for round $(k - 1)e$
+  \item compute $w$ using $\mathsf{SD}$
+  \item get $w_i$ from $\mathsf{SD}$
+  \item $m \leftarrow [\ ]$
+  \item for $j^* \in [m]$:
+  \begin{itemize}
+    \item $\sigma \leftarrow \mathsf{Mithril.Sig}(\mathsf{sk}, j^*, \mathsf{msg}, w_i, w)$
+    \item if $\sigma \ne \bot$: $m \leftarrow m : (\mathsf{vk}_P, j^*, \sigma)$
+  \end{itemize}
+  \item if $m = [\ ]$: $m \leftarrow \bot$
+  \item return $(\bot, \bot, m; \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r \in [ke + 1, ke + \Delta - 1]$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item put $m$ in $\mathsf{bst}$
+  \item return $(\bot, \bot, \bot; \mathsf{bst})$
+\end{itemize}
+
+}}
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r = ke + \Delta$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item put $m$ in $\mathsf{bst}$
+  \item get $\mathsf{msg}$ from $\mathsf{bst}$
+  \item get $[\mathsf{vk}_P : P \in P_{i,j}]$ from $\mathsf{bst}$
+  \item get $\mathsf{SD}$ from $C_i$ for round $r = ke$
+  \item get $\mathsf{VK}$ from $\mathsf{bst}$
+  \item get $\mathbf{WVK}$ from $\mathsf{SD}$ and $\mathsf{VK}$
+  \item compute $w$ using $\mathsf{SD}$
+  \item get $w_i$ from $\mathsf{SD}$
+  \item get $T := [(\mathsf{vk}, j^*, \sigma)]$ from $\mathsf{bst}$
+  \item $\textbf{S} \leftarrow [(\mathsf{vk}, j^*, \sigma) \in T : \mathsf{Mithril.Ver}(\mathsf{vk}, j^*, \mathsf{msg}, \sigma, w_i, w)]$
+  \item $\sigma^* \leftarrow \mathsf{Mithril.ASig}(\mathbf{WVK}, \mathsf{msg}, \textbf{S})$
+  % \item return $(\bot, (cID, (\mathsf{msg}, \sigma^*)), \bot; \mathsf{bst})$
+  \item get $\mathsf{crs}$ from $\mathsf{bst}$
+  \item $\pi^* \leftarrow \mathsf{Snark.Prove}(\mathsf{crs}, (\mathsf{msg}, \sigma^*), (\mathbf{WVK}, \textbf{S}))$  %\textit{// zk-proof of signature correctness}
+  \item return $(\bot, (cID, ((\mathsf{msg},\sigma*), \pi^*)), \bot; \mathsf{bst})$
+\end{itemize}
+
+\paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r \in [ke + \Delta + 1, (k+1)e - 1]$, $k \in \mathbb{N}$}
+\begin{itemize}
+  \item return $(\bot, \bot, \bot; \mathsf{bst})$
+\end{itemize}
+
+}}
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+
+\paragraph{GetVerData$_{i,j}(\mathsf{genesis}_j, \mathsf{rot}_{i,j}, L_j)$}
+\begin{itemize}
+  \item $\mathsf{LS} \leftarrow \mathsf{ledgerState}_j[\mathsf{genesis}_j](L_j)$
+  \item $cID \leftarrow \mathsf{Hash}(\mathsf{MITHBridge}[\mathsf{rot}_{i,j}].\mathsf{code})$
+  \item $(\_, \mathsf{mem}, \_) \leftarrow \mathsf{LS}[cID]$
+  \item return $\mathsf{mem}$
+\end{itemize}
+
+\paragraph{$\mathcal{R}^*_{i,j}((\mathsf{cpl}, x, h), C)$}
+\begin{itemize}
+  \item return $(\mathsf{Header}_i(C, \mathsf{cpl}) = h \land \mathcal{R}_{i,j}(x, L_i(C) \text{ up to } \mathsf{cpl}))$
+\end{itemize}
+
+\paragraph{Certify$_{i,j}(\mathsf{rot}_{i,j}, x, C_i)$}
+\begin{itemize}
+  \item get $\mathsf{crs}_{i,j}$ from $\mathsf{rot}_{i,j}$
+  \item $\mathsf{cpl} \leftarrow \lfloor r / \Delta_i \rfloor$
+  \item $h \leftarrow \mathsf{Header}_i(C, \mathsf{cpl})$
+  \item $\pi \leftarrow \mathsf{Snark.Prove}(\mathsf{crs}_{i,j}, (\mathsf{cpl}, x, h), C)$
+  \item return $(\mathsf{cpl}, \pi)$
+\end{itemize}
+
+\paragraph{Verify$_{i,j}(\mathsf{mem}, x, \pi)$}
+\begin{itemize}
+  \item get $\mathsf{crs}_{i,j}$ from $\mathsf{mem}$
+  \item get list of $h$ from $\mathsf{mem}$ for the $\mathsf{cpl}$
+  \item return $\mathsf{Snark.Verify}(\mathsf{crs}_{i,j}, (\mathsf{cpl}, x, h), \pi)$
+\end{itemize}
+
+}}
+
+
+% \fcolorbox{gray!20}{gray!5}{
+% \parbox{0.97\textwidth}{
+
+% \paragraph{Bridge Operation (Round $r = ke + \Delta$)}
+% \begin{enumerate}
+% \item Store $m$ in $\mathsf{bst}$
+% \item Retrieve $\mathsf{msg}$, keys $\[\mathsf{vk}_P : P \in P_{i,j}]$, and $\mathsf{SD}$ from $C\_i$
+% \item Compute weighted keys $\mathbf{WVK}$, weights $w, w\_i$
+% \item Validate and aggregate signatures $S \leftarrow \[(\mathsf{vk}, j^*, \sigma) : \mathsf{Mithril.Ver}(\cdots)]$
+% \item Compute aggregated signature: $\sigma^* \leftarrow \mathsf{Mithril.ASig}(\mathbf{WVK}, \mathsf{msg}, S)$
+% \item Retrieve $\mathsf{crs}$ and generate SNARK proof:
+% \begin{itemize}
+% \item $\pi^\* \leftarrow \mathsf{Snark.Prove}(\mathsf{crs}, (\mathsf{msg}, \sigma^*), \mathsf{avk})$
+% \end{itemize}
+% \item Return transaction: $(\bot, (\mathsf{cID}, (\mathsf{msg}, \pi^*)), \bot; \mathsf{bst})$
+% \end{enumerate}
+
+% }}
+
+
+\fcolorbox{gray!20}{gray!5}{
+\parbox{0.97\textwidth}{
+
+\paragraph{Contract: MITHBridge[$\mathsf{rot}\_{i,j}$]}
+
+\textbf{update}$(\mathsf{msg}, \pi)$:
+\begin{enumerate}
+  \item get $\mathsf{crs}$ from $\mathsf{rot}_{i,j}$
+  \item check $\mathsf{Snark.Verify}(\mathsf{crs}, (\mathsf{msg},\sigma*), \pi^*)$
+  \item parse $(\mathsf{cpl}, h, \mathsf{SD}, \mathsf{avk}, \mathsf{nonce}) \leftarrow \mathsf{msg.body}$
+  \item $\mathsf{mem} \leftarrow \mathsf{mem} : (\mathsf{cpl}, h, \mathsf{SD}, \mathsf{avk}, \mathsf{nonce})$
+\end{enumerate}
+
+\textbf{verify}$(x, \pi)$:
+\begin{enumerate}
+  \item if $\mathsf{Verify}_{i,j}(\mathsf{mem}, x, \pi)$: put $(\mathsf{ok}, x, \pi)$ in $\mathsf{mem}$
+\end{enumerate}
+
+}}
+
+\bigskip
+
+% \fcolorbox{gray!20}{gray!5}{
+% \parbox{0.97\textwidth}{
+
+% \textbf{Mithril Protocol $\Pi\_{\mathsf{Mithril}}$}
+
+% \underline{$\mathsf{Verify}(\langle AVK \rangle, ivk, ivk\_{\mathsf{body}}, \mu, e\_\sigma, {\cdots}, m, k) \rightarrow {0,1}$}:
+% \begin{itemize}
+% \item Check aggregate keys and signature validity
+% \item Perform Merkle inclusion and eligibility value checks
+% \item Ensure weight thresholds
+% \item Return $1$ if valid, otherwise $0$
+% \end{itemize}
+
+% }}
+
+
+
+
+% \subsection{Mithril Based zkbridge}
+
+% zkBridge: ATMS / Mithril-based
+
+% \paragraph{Setup$_{i,j}()$}
+% \begin{enumerate}
+%   \item $pp \leftarrow \mathsf{Mithril.PGen}()$
+%   \item $\mathsf{crs} \leftarrow \mathsf{Snark.Setup}()$
+%   \item return $(\mathsf{crs}, pp)$
+% \end{enumerate}
+
+% \paragraph{KGen$_{i,j}(pp_{i,j})$}
+% \begin{enumerate}
+%   \item return $\mathsf{Mithril.KGen}(pp_{i,j})$
+% \end{enumerate}
+
+% \paragraph{RoT$_{i,j}(pp_{i,j}, \mathsf{vks}_{i,j}, C_i, C_j)$}
+% \begin{enumerate}
+%   \item $[\mathsf{vk}_P : P \in P_{i,j}] \leftarrow \mathsf{parse}(\mathsf{keys}_{i,j})$
+%   \item $\mathsf{avk} \leftarrow \mathsf{Mithril.Avk}(pp_{i,j}, [\mathsf{vk}_P : P \in P_{i,j}])$
+%   \item $\mathsf{nonce} \leftarrow \mathsf{Beacon}(C_i)$
+%   \item put $\mathsf{nonce}$ in $\mathsf{bst}$
+%   \item get $\mathsf{SD}$ from $C_i$
+% %   \item $\mathsf{rot}_{i,j} \leftarrow (\mathsf{avk}, \mathsf{SD})$
+%   \item $\mathsf{aux}_{i,j} \leftarrow (\mathsf{rot}_{i,j}, [\mathsf{vk}_P : P \in P_{i,j}])$
+%   \item return $(\mathsf{rot}_{i,j}, \mathsf{aux}_{i,j})$
+% \end{enumerate}
+
+% \noindent
+% ...Mithril Bridge...
+
+% \paragraph{Br$_{i,j}(r, m; C_i, C_j; \mathsf{bst})$ when $r = ke + \Delta$, $k \in \mathbb{N}$}
+% \begin{enumerate}
+%   \item put $m$ in $\mathsf{bst}$
+%   \item get $\mathsf{msg}$ from $\mathsf{bst}$
+%   \item get $[\mathsf{vk}_P : P \in P_{i,j}]$ from $\mathsf{bst}$
+%   \item get $\mathsf{SD}$ from $C_i$ for round $r = ke$
+%   \item get $\mathsf{VK}$ from $\mathsf{bst}$
+%   \item form $\mathsf{WVK}$ from $\mathsf{SD}$ and $\mathsf{VK}$
+%   \item compute $w$ using $\mathsf{SD}$
+%   \item get $w_i$ from $\mathsf{SD}$
+%   \item get $T := [(\mathsf{vk}, j^*, \sigma)]$ from $\mathsf{bst}$
+%   \item $S \leftarrow [(\mathsf{vk}, j^*, \sigma) \in T : \mathsf{Mithril.Ver}(\mathsf{vk}, j^*, \mathsf{msg}, \sigma, w_i, w)]$
+%   \item $\sigma^* \leftarrow \mathsf{Mithril.ASig}(\mathsf{WVK}, \mathsf{msg}, S)$
+%   \item get $\mathsf{crs}$ from $\mathsf{bst}$
+%   \item $\pi^* \leftarrow \mathsf{Snark.Prove}(\mathsf{crs}, (\mathsf{msg}, \sigma^*), (AVK, ...))$  %\textit{// zk-proof of signature correctness}
+%   \item return $(\bot, (cID, (\mathsf{msg}, \pi^*)), \bot; \mathsf{bst})$
+% \end{enumerate}
+
+% \noindent
+% ...Mithril Bridge...
+
+
+% \mybox{Contract MITHBridge[$\mathsf{rot}_{i,j}$]}{white!40}{white!10}{
+
+% \textbf{update}$(\mathsf{msg}, \pi)$:
+% \begin{enumerate}
+%   \item get $\mathsf{crs}$ from $\mathsf{rot}_{i,j}$
+%   \item check $\mathsf{Snark.Verify}(\mathsf{crs}, \mathsf{msg}, \pi^*)$
+%   \item parse $(\mathsf{cpl}, h, \mathsf{SD}, \mathsf{avk}, \mathsf{nonce}) \leftarrow \mathsf{msg.body}$
+%   \item $\mathsf{mem} \leftarrow \mathsf{mem} : (\mathsf{cpl}, h, \mathsf{SD}, \mathsf{avk}, \mathsf{nonce})$
+% \end{enumerate}
+
+% \textbf{verify}$(x, \pi)$:
+% \begin{enumerate}
+%   \item if $\mathsf{Verify}_{i,j}(\mathsf{mem}, x, \pi)$: put $(\mathsf{ok}, x, \pi)$ in $\mathsf{mem}$
+% \end{enumerate}
+% }
+% \bigskip
+
+
+The following are the core algorithms that require zero-knowledge proof in the Mithril-based zero-knowledge proof cross-chain bridge:
+
+\mybox{Mithril Protocol $\Pi_\mathsf{Mithril}$}{white!40}{white!10}{
+\textbf{Inputs}: Merkle tree commitment of the committee public keys $\langle AVK \rangle$, aggregate public key $(ivk, ivk_{\mathsf{body}})$, aggregate signature $(\mu, e_\sigma)$, verification information $\{(mvk_i, stake_i, p_i, ev_i, \sigma_i, index_i)\}_{i \in S}$, and message $m$.
+
+\underline{$\mathsf{Verify}(\langle AVK \rangle, ivk, ivk_{\mathsf{body}}, \mu, e_\sigma, \{(mvk_i, stake_i, p_i, ev_i, \sigma_i, index_i)\}_{i \in S}, m, k) \rightarrow 0/1$}:
+\begin{itemize}
+    \item $ivk = \mathsf{MSP.BKey}(\mathbf{mvk}, e_\sigma)$, and $ivk_{\mathsf{body}} = \mathsf{MSP.AKey}(\mathbf{mvk})$ \quad $\triangleright$ Aggregate key derivation
+    \item $(\mu, e_\sigma) = \mathsf{MSP.BSig}(\boldsymbol{\sigma})$ \quad $\triangleright$ Aggregate signature and weight seed derivation
+    \item For all $i$: $index_i \leq m$ and for all $i \neq j$: $index_i \neq index_j$ \quad $\triangleright$ Index range and uniqueness checks
+    \item For all $i \in \{1, \dots, k\}$: verify that $(mvk_i, stake_i)$ is included in Merkle tree $\langle AVK \rangle$ along path $p_i$ \quad $\triangleright$ Merkle membership check
+    \item For all $i \in \{1, \dots, k\}$: verify $\mathsf{MSP.Eval}(topic, index_i, \sigma_i) = ev_i$ \quad $\triangleright$ Eligibility value computation
+    \item For all $i \in \{1, \dots, k\}$: verify $ev_i \leq \phi(stake_i)$ \quad $\triangleright$ Weight threshold check
+    \item If any of the above checks fail, output $0$; otherwise, output $1$
+\end{itemize}
+}
+
+\newpage
+\section{Benchmark Result on the New Server}
+
+\subsection{Server Configuration Information}
+
+
+The experiments were conducted on a G5500 V6 Whitley high-performance computing server, equipped with an Intel Xeon Platinum 8368 processor (152 cores @ 3.4GHz), 256GB of RAM, and running Ubuntu 22.04.5 LTS with kernel version 5.15.0-131-generic.
+
+
+
+
+\subsection{Benchmark Result}
+
+
+\textbf{Verification Relations for MSP.A:}
+\begin{itemize}
+  \item $\mathsf{MSP.AKey}(\mathbf{mvk})$ receives a set of verification keys $\mathbf{mvk}$ and computes the aggregate key $ivk = \sum_1^d mvk_i$.
+  \item $\mathsf{MSP.ASig}(\sigma)$ aggregates signatures as $\mu = \sum_1^d \sigma_i$.
+  \item $\mathsf{MSP.Ver}(msg, ivk, \mu)$ checks if $e(\mu, g_2) = e(H_{\mathbb{G}_1}(\text{``M''} \| msg), ivk)$.
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\caption{Benchmark Results of $\mathsf{MSP.A}$}
+\renewcommand{\arraystretch}{0.9}
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{c|c|c|c|c|c|c} \toprule
+    \textbf{Aggregated sig num} & \textbf{2} & \textbf{200} & \textbf{2000} & \textbf{4000} & \textbf{6000} & \textbf{8000}  \\ \midrule 
+    Proof Time (s) & 19.17 & 29.51 & 72.89 & 123.67 & 181.38 & 226.84  \\ 
+    Proof Size (bytes) & 3072 & 4128 & 11424 & 18944 & 26944 & 34944  \\ 
+    Verification Time (ms) & 20.93 & 9.09 & 19.95 & 16.03 & 20.25 & 55.16 \\ \bottomrule 
+\end{tabular}
+\label{tab:mspa_benchamrk}
+\end{table}
+
+
+
+\textbf{Verification Relations for MSP.B:}
+\begin{itemize}
+  \item $\mathsf{MSP.BKey}(\mathbf{mvk}, \mathbf{e_\sigma})$ computes $ivk = \sum mvk_i^{e_i}$, where $e_i \leftarrow H_\lambda(i, \mathbf{e_\sigma})$.
+  \item $\mathsf{MSP.BSig}(\sigma)$ returns $(\mu, \mathbf{e_\sigma})$, with $\mu = \sum \sigma_i^{e_i}$.
+  \item $\mathsf{MSP.Ver}(msg, ivk, \mu)$ verifies $e(\mu, g_2) = e(H_{\mathbb{G}_1}(\text{``M''} \| msg), ivk)$.
+\end{itemize}
+
+
+\begin{table}[htbp]
+\centering
+\caption{Benchmark Results of $\mathsf{MSP.B}$}
+\renewcommand{\arraystretch}{0.9}
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{c|c|c|c|c|c|c} \toprule
+    \textbf{Aggregated sig num} & \textbf{8} & \textbf{16} & \textbf{32} & \textbf{64} & \textbf{128} & \textbf{256} \\ \midrule
+    Proof Time (s) & 35.73 & 48.48 & 65.37 & 103.75 & 184.02 & 327.30 \\ 
+    Proof Size (bytes) & 5856 & 7936 & 10944 & 17312 & 30240 & 55744 \\ 
+    Verification Time (ms) & 10.30 & 14.68 & 15.05 & 14.54 & 24.51 & 69.35 \\ \bottomrule
+\end{tabular}
+\label{tab:mspb_benchmark}
+\end{table}
+
+
+\newpage
+
+\textbf{Validation Relation:} For all $i$, $\mathsf{index}_i \leq m$ and for all $i \neq j$, $\mathsf{index}_i \neq \mathsf{index}_j$.
+
+
+
+\begin{table}[htbp]
+\centering
+\caption{Benchmark Results of Index Validation}
+\renewcommand{\arraystretch}{0.9}
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{c|c|c|c|c|c} \toprule
+    \textbf{Number of Index Checks} & \textbf{128} & \textbf{256} & \textbf{512} & \textbf{1024} & \textbf{2048}  \\ \midrule
+    Proof Time (s) & 4.08 & 6.77 & 13.41 & 37.39 & 122.49  \\ 
+    Proof Size (bytes) & 960 & 1920 & 4576 & 14944 & 14944  \\ 
+    Verification Time (ms) & 5.05 & 6.15 & 9.42 & 15.10 & 13.08  \\ \bottomrule
+\end{tabular}
+\label{tab:index_check_benchmark}
+\end{table}
+
+
+
+\textbf{Verification Relation:} For each $i \in \{1, \dots, k\}$,
+\[ \mathsf{MSP.Eval}(\mathsf{topic}, \mathsf{index}_i, \sigma_i) = ev_i \quad \text{and} \quad ev_i \leq \phi(\mathsf{stake}_i). \]
+
+
+\begin{table}[htbp]
+\centering
+\caption{Benchmark Results of Eligibility Check}
+\renewcommand{\arraystretch}{0.9}
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{c|c|c|c|c|c} \toprule
+    \textbf{Number of Checks} & \textbf{128} & \textbf{256} & \textbf{512} & \textbf{1024} & \textbf{2048}  \\ \midrule
+    Proof Time (s) & 10.14 & 12.78 & 17.36 & 26.39 & 44.56 \\ 
+    Proof Size (bytes) & 1344 & 1920 & 2848 & 4800 & 8832 \\ 
+    Verification Time (ms) & 6.77 & 6.39 & 7.10 & 11.24 & 12.59 \\ \bottomrule
+\end{tabular}
+\label{tab:eligibility_check_benchmark}
+\end{table}
+
+
+
+\end{document}
