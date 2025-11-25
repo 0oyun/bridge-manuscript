@@ -1,0 +1,1070 @@
+\documentclass{article}
+% \documentclass[twocolumn]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tikz} 
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{amssymb}
+\usepackage{mathtools}
+
+\newcommand{\mybox}[5]{
+    \begin{center}
+    \begin{tikzpicture}
+        \node[anchor=text,text width=\columnwidth+1.0cm, draw, rounded corners, line width=1pt, fill=#3, inner sep=5mm] (big) {\\#4};
+        \node[draw, rounded corners, line width=.5pt, fill=#2, anchor=west, xshift=5mm] (small) at (big.north west) {#1};
+    \end{tikzpicture}
+    % \caption{#5}
+    \end{center}
+}
+
+
+\title{Mithril in Game-based Syntax}
+
+\author{Wuyunsiqin \quad \quad Bingsheng Zhang \\ 
+Zhejiang University, CHN \\
+22521299@zju.edu.cn \quad bingsheng@zju.edu.cn}
+% \date{May 20 2025}
+
+
+
+
+\begin{document}
+
+\maketitle
+
+
+
+\section{Primitives}
+
+\subsection{BLS Signature Scheme}
+
+Let $\lambda$ be the security parameter. We assume a bilinear group
+generation algorithm which on input $1^\lambda$ outputs
+\[
+(q, G_1, G_2, G_T, g_1, g_2, e),
+\]
+where $G_1,G_2,G_T$ are cyclic groups of prime order $q$, $g_1\in G_1$,
+$g_2\in G_2$ are generators, and
+$e : G_1 \times G_2 \to G_T$ is a bilinear pairing. Let
+$H : \{0,1\}^* \to G_1$ be a hash function modeled as a random oracle.
+
+We write the BLS signature scheme as
+\[
+  \Pi_{\mathsf{BLS}} = (\mathsf{Setup}, \mathsf{KGen}, \mathsf{Sign}, \mathsf{Ver}).
+\]
+
+\begin{itemize}
+  \item $pp \leftarrow\mathsf{Setup}(1^\lambda)$:  
+        run the group generator to obtain
+        $(q, G_1, G_2, G_T, g_1, g_2, e)$ and fix $H$.
+        Output public parameters
+        \[
+          \mathsf{pp} = (q, G_1, G_2, G_T, g_1, g_2, e, H).
+        \]
+
+  \item $(sk,vk) \leftarrow\mathsf{KGen}(\mathsf{pp})$:  
+        sample $sk \xleftarrow{\$} \mathbb{Z}_q$ and set
+        \[
+          vk = g_2^{sk} \in G_2.
+        \]
+        Output the key pair $(sk, vk)$.
+
+  \item $\sigma \leftarrow \mathsf{Sign}(\mathsf{pp}, sk, msg)$:  
+        compute $h \leftarrow H(msg) \in G_1$ and set
+        \[
+          \sigma = h^{sk} \in G_1.
+        \]
+        Output $\sigma$.
+
+  \item $b \leftarrow \mathsf{Ver}(\mathsf{pp}, vk, msg, \sigma)$, where $b \in \{0,1\}$:  
+        compute $h \leftarrow H(msg)$ and output
+        \[
+          b = 1
+          \;\text{iff}\;
+          e(\sigma, g_2) = e(h, vk).
+        \]
+\end{itemize}
+
+\subsection{Merkle Tree}
+
+% Let $H_{\mathsf{MT}} : \{0,1\}^* \to \{0,1\}^\kappa$ be a collision-resistant hash function. 
+
+% Let $H : \{0,1\}^* \to \{0,1\}^\kappa$ be a collision-resistant hash function. 
+
+% We denote the Merkle tree primitive by
+% \[
+%   \Pi_{\mathsf{MT}} = (\mathsf{Create}, \mathsf{Check}).
+% \]
+
+% \begin{itemize}
+%   \item $\mathsf{avk} \leftarrow \mathsf{Create}(\mathbf{vk})$:  
+%         on input a vector of verification keys
+%         $\mathbf{vk} = (vk_1,\dots,vk_N)$, output the root hash $\mathsf{avk} \in \{0,1\}^\kappa$.
+
+%   \item $b \leftarrow \mathsf{Check}(\mathsf{avk}, vk, path)$:  
+%         on input a root $\mathsf{avk}$, a value $vk$, and an
+%         authentication path $path$, recompute the root value. Output  \(b = 1 \;\text{iff the recomputed root equals }\mathsf{avk}\), \(b = 0\) otherwise.
+% \end{itemize}
+
+Let $H_{\mathsf{MT}}  : \{0,1\}^* \to \{0,1\}^\lambda$ be a collision-resistant hash function.
+
+We denote the Merkle tree primitive by
+\[
+\Pi_{\mathsf{MT}} = (\mathsf{Create}, \mathsf{Check}).
+\]
+
+\begin{itemize}
+
+    \item $\mathsf{avk} \leftarrow \mathsf{Create}(\mathbf{vk}, \mathbf{w})$ : 
+    on input a vector of verification keys $\mathbf{vk} = (vk_1,\dots,vk_N)$ and a matching stake vector $\mathbf{w}=(w_1,\dots,w_N)$, set leaves $\ell_i := H_{\mathsf{MT}} (vk_i , w_i)$ and output the Merkle root $\mathsf{avk}$.
+    
+    \item $b \leftarrow \mathsf{Check}(\mathsf{avk}, vk, w, path)$: on input a root $\mathsf{avk}$, a pair $(vk,w)$, and an authentication path $path$, recompute the root from $\ell := H_{\mathsf{MT}} (vk , w)$ and $path$. Output (b = 1) iff the recomputed root equals $\mathsf{avk}$, and (b = 0) otherwise.
+
+\end{itemize}
+
+
+
+
+\subsection{Mithril}
+
+We write the Mithril (stake–threshold multisignature, PSC style) scheme as
+\[
+  \Pi_{\mathsf{Mithril}}
+  =
+  (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck}, \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}).
+\]
+
+\begin{itemize}
+
+  \item $(\mathsf{pp}) \leftarrow \mathsf{Setup}(1^\lambda)$:\\
+        run $\Pi_{\mathsf{BLS}}.\mathsf{Setup}(1^\lambda)$ to obtain $(q,G_1,G_2,G_T,g_1,g_2,e,H)$
+        
+        fix a dense mapping / eligibility function
+        \[
+        Eval : ( msg, index, \sigma) \mapsto \{0,1\},
+        \]
+        % \[
+        %   Eval : G_1 \times \{1,\dots,\mu\} \times \{0,1\}^* \to \{0,1\}^\lambda,
+        % \]
+        a weighting function
+        \[
+          \varphi : \mathbb{N} \to [0,1],
+        \]
+        e.g. $\varphi(w) = 1-(1-f)^w$.
+
+        Index range
+        \[
+          \mu \in \mathbb{N}, 
+        \]
+
+        a quorum or lottery parameter
+        \[
+          k \in \{1,\dots,\mu\}.
+        \]
+        Output
+        \[
+          \mathsf{pp}=(q,G_1,G_2,G_T,g_1,g_2,e,H,Eval,\varphi,\mu,k).
+        \]
+
+  \item $(sk,vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:\\
+        run $\Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp})$ to obtain
+        \[
+          sk \xleftarrow{\$} \mathbb{Z}_q,
+        \]
+        \[
+          vk = g_2^{sk} \in G_2.
+        \]
+        Output $(sk,vk)$.
+
+  \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$:\\
+        given
+        \[
+          \mathbf{vk}=(vk_1,\dots,vk_N),
+        \]
+        \[
+          \mathbf{w}=(w_1,\dots,w_N),
+        \]
+        set
+        \[
+          \mathsf{avk} \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+
+  \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk},\mathbf{vk},\mathbf{w})$, where $b\in\{0,1\}$:\\
+        compute
+        \[
+          avk' \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+        output b=1 iff avk=avk'. 
+
+  \item $\pi \leftarrow \mathsf{Sig}(\mathsf{pp}, \mathbf{vk, w}, sk, j, m)$:\\
+        compute the BLS signature
+        \[
+          \sigma \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp}, sk, m),
+        \]
+        compute the eligibility value
+        \[
+          ev \leftarrow Eval(\sigma, j, m),
+        \]
+        and check the threshold
+        % \[
+        %   ev \;<\; \bigl\lfloor \varphi(w)\cdot 2^\lambda \bigr\rfloor.
+        % \]
+        \[
+          ev \;<\;  \varphi(w).
+        \]
+        If true, output
+        \[
+          \pi=(j, \sigma, vk, w).
+        \]
+        Otherwise output $\bot$.
+
+
+
+
+          \item $\tau \leftarrow \mathsf{ASig}(\mathsf{pp}, m, \{\pi_i\}_{i=1}^{t})$:\\
+        parse each
+        \[
+          \pi_i=(j_i,\sigma_i,vk_i,w_i),
+        \]
+        with pairwise distinct
+        \[
+          j_i \in \{1,\dots,\mu\}.
+        \]
+        Set
+        \[
+          \sigma^\star \;=\; \prod_{i=1}^{t} \sigma_i \;\in\; G_1,
+        \]
+        \[
+          vk^\star \;=\; \prod_{i=1}^{t} vk_i \;\in\; G_2.
+        \]
+        Derive a batching seed
+        \[
+          e_\sigma \;\leftarrow\; H\!\bigl(\sigma_1 \,\|\, \cdots \,\|\, \sigma_t \,\bigr),
+        \]
+        and coefficients for $i=1,\dots,t$
+        \[
+          \rho_i \;\leftarrow\; \mathsf{H_\lambda}(e_\sigma \,\|\, i) \in \mathbb{Z}_q^\ast.
+        \]
+        Compute the batch aggregates
+        \[
+          \mu \;=\; \prod_{i=1}^{t} \sigma_i^{\rho_i} \;\in\; G_1,
+        \]
+        \[
+          ivk \;=\; \prod_{i=1}^{t} vk_i^{\rho_i} \;\in\; G_2.
+        \]
+        Output
+        \[
+          \tau \;=\; (\,\sigma^\star,\, vk^\star,\, \mu,\, ivk,\, e_\sigma).
+        \]
+
+  \item $b \leftarrow \mathsf{AVer}(\mathsf{pp}, \mathsf{avk}, m, \tau)$, where $b\in\{0,1\}$:\\
+        parse
+        \[
+          \tau=(\sigma^\star, vk^\star, \mu, ivk, e_\sigma).
+        \]
+        Check that the indices are pairwise distinct.
+        Compute
+        \[
+          h \leftarrow H(m).
+        \]
+        Verify the equation
+        \[
+          e(\sigma^\star, g_2) \;=\; e(h, vk^\star).
+        \]
+        Recompute the batching coefficients for $i=1,\dots,t$
+        \[
+          \rho_i \;\leftarrow\; \mathsf{H}(e_\sigma \,\|\, i) \in \mathbb{Z}_q^\ast,
+        \]
+        and the corresponding aggregated public key
+        \[
+          ivk' \;=\; \prod_{i=1}^{t} vk_i^{\rho_i} \;\in\; G_2.
+        \]
+        Check consistency of the submitted aggregated key
+        \[
+          ivk' \;=\; ivk.
+        \]
+        Verify the batched equation
+        \[
+          e(\mu, g_2) \;=\; e(h, ivk).
+        \]
+        Output
+        \[
+          b \;=\; 1 \text{ iff all checks above hold.}
+        \]
+\end{itemize}
+
+
+
+% \subsection{Mithril}
+
+% We write the Mithril (stake–threshold multisignature, PSC style) scheme as
+% \[
+%   \Pi_{\mathsf{Mithril}}
+%   =
+%   (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck}, \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}).
+% \]
+
+% \begin{itemize}
+
+%   \item $(\mathsf{pp}) \leftarrow \mathsf{Setup}(1^\lambda)$:\\
+%         run $\Pi_{\mathsf{BLS}}.\mathsf{Setup}(1^\lambda)$ to obtain $(q,G_1,G_2,G_T,g_1,g_2,e,H)$; fix
+%         \[
+%           H_{\mathsf{p}} : \{0,1\}^* \to \{0,1\}^\lambda,
+%         \]
+%         \[
+%           T:\mathbb{N}\to\{0,1\}^\lambda,
+%         \]
+%         \[
+%           \mu \in \mathbb{N}, 
+%         \]
+%         \[
+%           k \in \{1,\dots,\mu\}.
+%         \]
+%         Output
+%         \[
+%           \mathsf{pp}=(q,G_1,G_2,G_T,g_1,g_2,e,H,H_{\mathsf{p}},T,\mu,k).
+%         \]
+
+%   \item $(sk,vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:\\
+%         run $\Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp})$ to obtain
+%         \[
+%           sk \xleftarrow{\$} \mathbb{Z}_q,
+%         \]
+%         \[
+%           vk = g_2^{sk} \in G_2.
+%         \]
+%         Output $(sk,vk)$.
+
+%   \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$:\\
+%         given
+%         \[
+%           \mathbf{vk}=(vk_1,\dots,vk_N),
+%         \]
+%         \[
+%           \mathbf{w}=(w_1,\dots,w_N),
+%         \]
+%         set
+%         \[
+%           \mathsf{avk} \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+%         \]
+
+%   \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk},\mathbf{vk},\mathbf{w})$, where $b\in\{0,1\}$:\\
+%         compute
+%         \[
+%           avk' \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+%         \]
+%         output b=1 iff avk=avk'. 
+
+%   \item $\pi \leftarrow \mathsf{Sig}(\mathsf{pp}, vk, w, path, sk, j, m)$:\\
+%         compute
+%         \[
+%           r \leftarrow H_{\mathsf{p}}(vk \,\|\, w \,\|\, j \,\|\, m),
+%         \]
+%         check
+%         \[
+%           r < T(w).
+%         \]
+%         If true, compute
+%         \[
+%           \sigma \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp}, sk, m),
+%         \]
+%         and output
+%         \[
+%           \pi=(j, \sigma, vk, w, path).
+%         \]
+%         Otherwise output $\bot$.
+
+%   \item $\tau \leftarrow \mathsf{ASig}(\mathsf{pp}, m, \{\pi_i\}_{i=1}^{t})$:\\
+%         parse each
+%         \[
+%           \pi_i=(j_i,\sigma_i,vk_i,w_i,path_i),
+%         \]
+%         with pairwise distinct
+%         \[
+%           j_i \in \{1,\dots,\mu\}.
+%         \]
+%         Set
+%         \[
+%           \sigma^\star \;=\; \prod_{i=1}^{t} \sigma_i \;\in\; G_1.
+%         \]
+%         Output
+%         \[
+%           \tau \;=\; \bigl(\sigma^\star, \{(j_i,vk_i,w_i,path_i)\}_{i=1}^{t}\bigr).
+%         \]
+
+%   \item $b \leftarrow \mathsf{AVer}(\mathsf{pp}, \mathsf{avk}, m, \tau)$, where $b\in\{0,1\}$:\\
+%         parse
+%         \[
+%           \tau=(\sigma^\star, \{(j_i,vk_i,w_i,path_i)\}_{i=1}^{t}).
+%         \]
+%         For each $i$, check
+%         \[
+%           \Pi_{\mathsf{MT}}.\mathsf{Check}(\mathsf{avk}, vk_i, w_i, path_i)=1,
+%         \]
+%         \[
+%           H_{\mathsf{p}}(vk_i \,\|\, w_i \,\|\, j_i \,\|\, m) < T(w_i).
+%         \]
+%         Check that the indices are pairwise distinct.
+%         Compute
+%         \[
+%           h \leftarrow H(m).
+%         \]
+%         Accept iff
+%         \[
+%           e(\sigma^\star, g_2) \;=\; \prod_{i=1}^{t} e(h, vk_i)
+%         \]
+%         and
+%         \[
+%           t \ge k.
+%         \]
+% \end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% \subsection{Mithril}
+
+% We write the Mithril scheme as
+% \[
+% \Pi_{\mathsf{Mithril}} = (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck}, \mathsf{Sig}, \mathsf{Asig}, \mathsf{AVer}).
+% \]
+
+% \begin{itemize}
+
+%     \item $(pp,m) \leftarrow\mathsf{Setup}(1^\lambda)$:
+%     \item $(sk,vk) \leftarrow \mathsf{KGen}(pp)$:
+%     \item $avk \leftarrow \mathsf{AKey}(\mathbf{vk,w})$:
+%     \item $\sigma \leftarrow \mathsf{Sig}(\mathbf{vk,w},sk,j,m)$:
+%     \item $\tau \leftarrow \mathsf{ASig}(\mathbf{vk,w},m,\{(vk_i,\sigma_i):i=1,...,k\})$
+%     \item $b \leftarrow \mathsf{AVer}(avk,m,\sigma,w)$
+
+
+
+% \end{itemize}
+
+
+
+
+% \paragraph{Mithril.Setup($\lambda$)}
+% \begin{align*}
+% &pp_{bls} \leftarrow \text{BLS.Setup}(1^\lambda)\\
+% &m\\
+% &\varphi\\
+% &Eval\\
+% &\text{return } pp
+% \end{align*}
+
+
+% \paragraph{Mithril.KGen(pp)}
+% \begin{align*}
+% &(sk,vk) \leftarrow \text{BLS.KGen}(1^\lambda) \\
+% & w\\
+% &\text{return } (sk, vk,w)
+% \end{align*}
+
+
+% \paragraph{Mithril.AKey($\mathbf{vk}, \mathbf{w}$)}
+% \begin{align*}
+% &\mathbf{WVK} \leftarrow {(vk_i, w_i) : i \in [n]}\\
+% &avk \leftarrow \mathsf{MT.Create}(\mathbf{WVK})\\
+% &\text{return } avk
+% \end{align*}
+
+% % \paragraph{Mithril.ACheck($avk, vk, w, path$)}
+% % \begin{align*}
+% % &b \leftarrow \mathsf{MT.Check}(avk,(vk,w),path)\\
+% % &\text{return } b
+% % \end{align*}
+
+% \paragraph{Mithril.Sig($vk, w, sk, m, avk, path$)}
+% \begin{align*}
+% &\textit{topic} \leftarrow \langle avk, m.\mathsf{topic} \rangle\\
+% &\sigma^{\mathsf{topic}} \leftarrow \mathsf{BLS.Sign}(sk,\textit{topic})\\
+% &ev \leftarrow \mathsf{Eval}(\textit{topic}, j, \sigma^{\mathsf{topic}})\\
+% &\mathbf{if}\ \mathsf{MT.Check}(avk,(vk,w),path)=1\ \wedge\ ev < \varphi(w)\ \mathbf{then}\\
+% &\quad \sigma^{\mathsf{body}} \leftarrow \mathsf{BLS.Sign}(sk,\langle \textit{topic}, m.\mathsf{body} \rangle)\\
+% &\quad \sigma \leftarrow (vk,w,path,j,\sigma^{\mathsf{topic}},\sigma^{\mathsf{body}})\\
+% &\quad \text{return } \sigma\\
+% &\mathbf{else}\ \text{return } \bot
+% \end{align*}
+
+
+% \paragraph{Mithril.ASig(avk, \textbf{vk}, \textbf{w}, m, S=$\{((\sigma_j^{\mathsf{topic}},\sigma_j^{\mathsf{body}},ev_j,j),vk_j) | j\  \in\  [k]\}$)}
+% \begin{align*}
+% &\text{let } \textit{topic} \leftarrow "0" \parallel avk \parallel m.\mathsf{topic}\\
+% &\boldsymbol{\sigma}^{\mathsf{body}} \leftarrow [\{\sigma_j^{\mathsf{body}} | j\  \in\  [k]\}] \\
+% &\boldsymbol{\sigma}^{\mathsf{topic}} \leftarrow [\{\sigma_j^{\mathsf{topic}} | j\  \in\  [k]\}] \\
+% &\boldsymbol{ev} \leftarrow [\{ev_j | j\  \in\  [k]\}] \\
+% &e_{\sigma} \leftarrow H_p(\boldsymbol{\sigma}^{\mathsf{body}}) \\
+% &e_j \leftarrow H_\lambda(j, e_{\sigma}) \\
+% &\mu \leftarrow \prod_j (\sigma_j^{\mathsf{body}})^{e_j} \\
+% &ivk \leftarrow \prod_j vk_j^{e_j} \\
+% &\tau \leftarrow (\mu, e_{\sigma}, ivk) \\
+% &\text{return } \tau 
+% \end{align*}
+
+
+% \paragraph{Mithril.AVer(avk, m, $\tau$)}
+% \begin{align*}
+% &(\mu, e_{\sigma}, ivk) \leftarrow \tau \\
+% &\textit{topic} \leftarrow "0" \parallel avk \parallel m.\mathsf{topic}\\
+% &h_{\mathsf{body}} \leftarrow H!\left("1" \parallel \textit{topic} \parallel m.\mathsf{body}\right)\\
+% &\forall j \in [k]:\ e_j \leftarrow H_\lambda(j, e_{\sigma})\\
+% &s \leftarrow \sum_{j \in [k]} e_j\\
+% &\textbf{return}\ \big[, e(\mu, g_2) = e(h_{\mathsf{body}}^{;s}, ivk) ,\big]
+% \end{align*}
+
+% % \paragraph{Mithril.ASig($avk, m, S$)}
+% % \begin{align*}
+% % &\textit{topic} \leftarrow \langle avk, m.\mathsf{topic} \rangle\\
+% % &S' \leftarrow (vk_i,w_i,path_i,j_i,\sigma^{\mathsf{topic}}*i,\sigma^{\mathsf{body}}*i)\in S \\
+% % &\boldsymbol{\sigma}^{\mathsf{body}} \leftarrow [\sigma^{\mathsf{body}}*i]*{(\cdot)\in S'}\\
+% % &e*\sigma \leftarrow H_p(\boldsymbol{\sigma}^{\mathsf{body}})\\
+% % &\forall (vk_i,\ldots,j_i,\sigma^{\mathsf{body}}*i)\in S':\ e_i \leftarrow H*\lambda(j_i,e*\sigma)\\
+% % &\mu \leftarrow \prod*{(\cdot)\in S'} (\sigma^{\mathsf{body}}*i)^{e_i}\\
+% % &ivk \leftarrow \prod*{(\cdot)\in S'} vk_i^{e_i}\\
+% % &\tau \leftarrow (e*\sigma,\mu,ivk,S')\\
+% % &\text{return } \tau
+% % \end{align*}
+
+% % \paragraph{Mithril.ASig($avk, m, S$)}
+% % \begin{align*}
+% % &\textit{topic} \leftarrow \langle avk, m.\mathsf{topic} \rangle\\
+% % &S' \leftarrow {(vk_i,w_i,path_i,j_i,\sigma^{\mathsf{topic}}*i,\sigma^{\mathsf{body}}*i)\in S \\
+% % % :\{ \mathsf{MT.Check}(avk,(vk_i,w_i),path_i)=1\\
+% % % &\qquad \wedge\ \mathsf{BLS.Ver}(vk_i,\sigma^{\mathsf{topic}}*i,\textit{topic})=1\ \wedge\ \mathsf{MSP.Eval}(\textit{topic}, j_i, \sigma^{\mathsf{topic}}*i) < \varphi(w_i)}\\
+% % % &\text{require } {j_i:(\cdot,j_i,\cdot)\in S'}\ \text{pairwise distinct and } |S'|\ge k\\
+% % &\boldsymbol{\sigma}^{\mathsf{body}} \leftarrow [\sigma^{\mathsf{body}}*i]*{(\cdot)\in S'}\\
+% % &e*\sigma \leftarrow H_p(\boldsymbol{\sigma}^{\mathsf{body}})\\
+% % &\forall (vk_i,\ldots,j_i,\sigma^{\mathsf{body}}*i)\in S':\ e_i \leftarrow H*\lambda(j_i,e*\sigma)\\
+% % &\mu \leftarrow \prod*{(\cdot)\in S'} (\sigma^{\mathsf{body}}*i)^{e_i}\\
+% % &ivk \leftarrow \prod*{(\cdot)\in S'} vk_i^{e_i}\\
+% % &\tau \leftarrow (e*\sigma,\mu,ivk,S')\\
+% % &\text{return } \tau
+% % \end{align*}
+
+% % \paragraph{Mithril.AVer($avk, m, \tau$)}
+% % \begin{align*}
+% % &(e_\sigma,\mu,ivk,S') \leftarrow \tau\\
+% % &\textit{topic} \leftarrow \langle avk, m.\mathsf{topic} \rangle\\
+% % &\forall (vk_i,w_i,path_i,j_i,\sigma^{\mathsf{topic}}_i,\sigma^{\mathsf{body}}_i)\in S':\\
+% % &\quad b_i \leftarrow \mathsf{MT.Check}(avk,(vk_i,w_i),path_i)\\ \wedge\ \mathsf{BLS.Ver}(vk_i,\sigma^{\mathsf{topic}}*i,\textit{topic})\\
+% % &\quad b_i \leftarrow b_i\ \wedge\ (\mathsf{MSP.Eval}(\textit{topic}, j_i, \sigma^{\mathsf{topic}}*i) < \varphi(w_i))\\
+% % &\text{require pairwise distinct }{j_i},\ \bigwedge_i b_i = 1,\ |S'|\ge k\\
+% % &\forall i:\ e_i \leftarrow H*\lambda(j_i,e*\sigma)\\
+% % &H^* \leftarrow \prod_i H(\langle \textit{topic}, j_i, m.\mathsf{body}\rangle)^{e_i}\\
+% % &\textbf{return }\ \big[,e(\mu, g_2) = e(H^*, ivk),\big]
+% % \end{align*}
+
+
+
+
+
+% % \subsection{Mithril}
+
+% % We fix a total number of participants $N$ and an index set
+% % $[N] = \{1,\dots,N\}$. Each participant $i \in [N]$ has an
+% % associated (normalized) stake $s_i \in [0,1]$, and we write
+% % $\mathbf{s} = (s_1,\dots,s_N)$ for the stake vector. Let
+% % $m \in \mathbb{N}$ denote the number of ``seats'' (lotteries)
+% % per message and $k \le m$ the threshold parameter. We use
+% % a weighting function
+% % \[
+% %   \varphi : [0,1] \to [0,1]
+% % \], e.g.\ $\varphi(w) = 1-(1-f)^w$,
+% % to map stake to per-seat success probability.
+
+% % We assume the BLS scheme $\Pi_{\mathsf{BLS}}$ and Merkle tree
+% % $\Pi_{\mathsf{MT}}$,
+% % and a dense mapping / eligibility function
+% % \[
+% %   E : (\textsf{pp}, s_i, msg, j, \sigma) \mapsto \{0,1\}
+% % \]
+% % obtained from a dense mapping $M$ and $\varphi$ (cf.\ Mithril).
+
+% % We define the Mithril STMS primitive as
+% % \[
+% %   \Pi_{\mathsf{Mithril}}
+% %   = (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey},
+% %      \mathsf{ACheck}, \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}).
+% % \]
+
+% % \paragraph{Setup.}
+% % \begin{itemize}
+% %   \item $\mathsf{pp} \leftarrow \mathsf{Setup}(1^\lambda)$:  
+
+% %         run the BLS setup to obtain bilinear groups and hash
+% %         $H$, fix Merkle hash $H_{\mathsf{MT}}$, fix parameters
+% %         $(m,k,\varphi)$, and fix the eligibility mapping $E$.
+% %         Output public parameters
+% %         \[
+% %           \mathsf{pp} = (\Pi_{\mathsf{BLS}}, \Pi_{\mathsf{MT}},
+% %                          m, k, \varphi, E).
+% %         \]
+% % \end{itemize}
+
+% % \paragraph{Key generation.}
+% % \begin{itemize}
+% %   \item $(sk_i, vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$:  
+
+% %         run BLS key generation to obtain a secret key
+% %         $sk_i$ and a verification key $vk_i \in G_2$.
+% % \end{itemize}
+
+% % \paragraph{Aggregate key and registration.}
+% % \begin{itemize}
+% %   \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk}, \mathbf{s})$:
+
+% %         on input a vector of verification keys
+% %         $\mathbf{vk} = (vk_1,\dots,vk_N)$ and the stake vector
+% %         $\mathbf{s} = (s_1,\dots,s_N)$, define
+% %         $\mathsf{reg}_i = (vk_i,s_i)$ for all $i\in[N]$ and
+% %         build a Merkle tree over the sequence
+% %         $(\mathsf{reg}_1,\dots,\mathsf{reg}_N)$ using
+% %         $\Pi_{\mathsf{MT}}$, outputting the root
+% %         \[
+% %           \mathsf{avk}
+% %           \in \{0,1\}^\kappa,
+% %         \]
+% %         which we refer to as the aggregate verification key.
+
+% %   \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk}, vk_i, s_i, path_i)$,
+% %         $b \in \{0,1\}$:
+
+% %         on input a root $\mathsf{avk}$, a pair $(vk_i,s_i)$ and a
+% %         Merkle authentication path $path_i$, recompute the root
+% %         using $\Pi_{\mathsf{MT}}.\mathsf{Check}$ and output
+% %         \[
+% %           b = 1 \;\text{iff}\; (vk_i,s_i)
+% %           \text{ is a valid leaf under root } \mathsf{avk}.
+% %         \]
+% % \end{itemize}
+
+% % \paragraph{Stake-based signing (per seat).}
+% % \begin{itemize}
+% %   \item $\sigma_{i,j} \leftarrow
+% %          \mathsf{Sig}(\mathsf{pp}, sk_i, s_i, \mathsf{avk}, msg, j, path_i)$:
+
+% %         on input the parameters, party $i$'s secret key $sk_i$,
+% %         stake $s_i$ and Merkle path $path_i$, a message $msg$
+% %         and a seat index $j \in [m]$,
+% %         \begin{enumerate}
+% %           \item first check
+% %                 $b \leftarrow \mathsf{ACheck}(\mathsf{avk}, vk_i, s_i, path_i)$,
+% %                 and abort with $\bot$ if $b=0$;
+% %           \item define a bound message
+% %                 $msg' = (msg, \mathsf{avk}, j)$ and compute a
+% %                 BLS signature
+% %                 \[
+% %                   \tilde{\sigma}_{i,j}
+% %                   \leftarrow \mathsf{Sign}_{\mathsf{BLS}}
+% %                              (sk_i, msg');
+% %                 \]
+% %           \item evaluate the eligibility predicate
+% %                 \[
+% %                   e_{i,j}
+% %                   \leftarrow
+% %                   E(\mathsf{pp}, s_i, msg, j, \tilde{\sigma}_{i,j})
+% %                   \in \{0,1\};
+% %                 \]
+% %           \item if $e_{i,j} = 0$, output $\bot$ (not eligible for
+% %                 this seat); otherwise output the signature share
+% %                 \[
+% %                   \sigma_{i,j}
+% %                   = (vk_i, s_i, path_i, j, \tilde{\sigma}_{i,j}).
+% %                 \]
+% %         \end{enumerate}
+% % \end{itemize}
+
+% % \paragraph{Aggregation.}
+% % \begin{itemize}
+% %   \item $\tau \leftarrow
+% %          \mathsf{ASig}(\mathsf{pp}, \mathsf{avk}, msg, T)$:
+
+% %         on input a multiset $T$ of signature shares
+% %         $\sigma_{i,j}$ (coming from potentially different
+% %         parties and indices $j$), the algorithm
+% %         \begin{enumerate}
+% %           \item filters $T$ to keep only shares with
+% %                 $\mathsf{ACheck}(\mathsf{avk}, vk_i, s_i, path_i)=1$,
+% %                 with valid BLS signatures on $msg'=(msg,\mathsf{avk},j)$,
+% %                 with $E(\mathsf{pp}, s_i, msg, j, \tilde{\sigma}_{i,j})=1$,
+% %                 and with pairwise distinct indices $j$;
+% %           \item if the resulting set $T'$ has size $< k$, output
+% %                 $\bot$;
+% %           \item otherwise, let $I$ be the index set of $T'$ and
+% %                 compute the aggregated BLS signature
+% %                 \[
+% %                   \mu \;=\;
+% %                   \prod_{(vk_i,s_i,path_i,j,\tilde{\sigma}_{i,j})\in T'}
+% %                   \tilde{\sigma}_{i,j};
+% %                 \]
+% %           \item output the certificate
+% %                 \[
+% %                   \tau = (T', \mu).
+% %                 \]
+% %         \end{enumerate}
+
+% %   \item $b \leftarrow
+% %          \mathsf{AVer}(\mathsf{pp}, \mathsf{avk}, msg, \tau)$,
+% %         where $b \in \{0,1\}$:
+
+% %         on input $(\mathsf{avk}, msg, \tau = (T',\mu))$,
+% %         the verifier checks that
+% %         \begin{enumerate}
+% %           \item every share in $T'$ is consistent with
+% %                 $\mathsf{avk}$ via $\mathsf{ACheck}$,
+% %                 is a valid BLS signature on $msg'=(msg,\mathsf{avk},j)$,
+% %                 and satisfies eligibility
+% %                 $E(\mathsf{pp}, s_i, msg, j, \tilde{\sigma}_{i,j})=1$;
+% %           \item the indices $j$ appearing in $T'$ are pairwise
+% %                 distinct and $|T'| \ge k$;
+% %           \item writing $PK = \prod_{(vk_i,\dots)\in T'} vk_i$,
+% %                 it holds that
+% %                 \[
+% %                   e(\mu, g_2)
+% %                   = e(H(msg'), PK).
+% %                 \]
+% %         \end{enumerate}
+% %         If all checks pass, output $b=1$, otherwise $b=0$.
+% % \end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% % \subsection{Mithril}
+
+
+% % % \[
+% % % \Pi_{\mathsf{F-Mithril}}
+% % % = (\mathsf{Register},
+% % %    \mathsf{EligibilityCheck}, \mathsf{CreateSig}, \mathsf{Verify},
+% % %    \mathsf{Aggregate}, \mathsf{VerifyAggregate})
+% % % \]
+
+% % \[
+% % \Pi_{\mathsf{SNARK-Mithril}}
+% % = (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey},
+% %    \mathsf{ACheck},
+% %    \mathsf{Sig}, \mathsf{ASig}, \mathsf{Aver})
+% % \]
+
+% % \paragraph{Setup(\lambda)}
+% % \begin{align*}
+% % &pp \leftarrow \text{BLS.Setup}(1^\lambda)\\
+% % &\text{return  pp }
+% % \end{align*}
+
+% % \paragraph{Mithril.KGen(pp)}
+% % \begin{align*}
+% % &(sk,vk) \leftarrow \text{BLS.KGen}(1^\lambda) \\
+% % &\text{return } (sk, vk)
+% % \end{align*}
+
+% % \paragraph{Mithril.AKey(\textbf{vk}, \textbf{w})}
+% % \begin{align*}
+% % &\textbf{WVK} \leftarrow \{(w_i, vk_i) : i \in [n]\} \\
+% % % &w \leftarrow \sum_{i \in [n]} w_i\\
+% % &avk \leftarrow MT.\mathrm{Create}(\textbf{WVK}) \\
+% % % &\pi_1 \leftarrow \mathsf{SNARK.Prove}(pp, x = avk, w = (\textbf{vk}, \textbf{w}, \textbf{path})) \\
+% % % &\quad (\mathcal{R} = \{(x = avk, w = (\textbf{VK}, \textbf{w}, \textbf{path}))\quad |\\ & \quad \ \ \forall i \in [m],\ MT.\mathrm{Check}(avk, (w_i, vk_i), path_i) = 1 \}) \\
+% % &\text{return } (avk,\pi_1)
+% % \end{align*}
+
+% % \paragraph{Mithril.ACheck(avk,\textbf{vk}, \textbf{w}, \textbf{path})}
+% % \begin{align*}
+% % &b \leftarrow \mathsf{SNARK.Verify}(pp, x = avk, \pi_1)\\
+% % &\text{return b} 
+% % \end{align*}
+
+% % % \paragraph{Mithril.AvkCheck(avk, srs)}
+
+% % % \begin{align*}
+% % % &\text{return } \mathsf{SNARK.Verify}(srs, x = avk,\pi_1)
+% % % \end{align*}
+
+% % % \paragraph{Mithril.Sig(vk, w, \texttt{sk, j, m})}
+% % % \begin{align*}
+% % % % &\sigma \leftarrow \mathrm{BLS.Sign}(sk, (j|| msg|| w|| w_{i})) \\
+% % % &\text{On EligibilityCheck(m, j) is 1,}\\
+% % % &\sigma \leftarrow \mathrm{BLS.Sign}(sk, m) \\
+% % % &\text{return } \sigma
+% % % \end{align*}
+
+% % \paragraph{Mithril.Sig(vk, w,$\texttt{sk, j, m})$}
+% % \begin{align*}
+% % &\text{let } \textit{topic} \leftarrow "0" \parallel avk \parallel m.\mathsf{topic}\\
+% % &\sigma_{topic} \leftarrow \mathrm{BLS.Sign}(sk,\ \textit{topic})\\
+% % &ev \leftarrow \mathrm{MSP.Eval}(\textit{topic},\ j,\ \sigma_{topic})\\
+% % &\mathbf{if}\ ev < \phi(w)\ \mathbf{then}\\
+% % &\qquad \sigma_{\mathsf{body}} \leftarrow \mathrm{BLS.Sign}(sk,\ "1" \parallel \textit{topic} \parallel m.\mathsf{body})\\
+% % &\qquad \sigma \leftarrow (\sigma_{topic},\sigma_{\mathsf{body}}, ev, j)\\
+% % &\qquad \textbf{return}\ \sigma \\
+% % &\mathbf{else}\ \textbf{return}\ \bot
+% % \end{align*}
+
+
+% % \paragraph{Mithril.ASig(avk, \textbf{vk}, \textbf{w}, m, S=$\{((\sigma_j^{\mathsf{topic}},\sigma_j^{\mathsf{body}},ev_j,j),vk_j) | j\  \in\  [k]\}$)}
+% % \begin{align*}
+% % &\text{let } \textit{topic} \leftarrow "0" \parallel avk \parallel m.\mathsf{topic}\\
+% % &\boldsymbol{\sigma}^{\mathsf{body}} \leftarrow [\{\sigma_j^{\mathsf{body}} | j\  \in\  [k]\}] \\
+% % &\boldsymbol{\sigma}^{\mathsf{topic}} \leftarrow [\{\sigma_j^{\mathsf{topic}} | j\  \in\  [k]\}] \\
+% % &\boldsymbol{ev} \leftarrow [\{ev_j | j\  \in\  [k]\}] \\
+% % &e_{\sigma} \leftarrow H_p(\boldsymbol{\sigma}^{\mathsf{body}}) \\
+% % &e_j \leftarrow H_\lambda(j, e_{\sigma}) \\
+% % &\mu \leftarrow \prod_j (\sigma_j^{\mathsf{body}})^{e_j} \\
+% % &ivk \leftarrow \prod_j vk_j^{e_j} \\
+% % &\pi_2 \leftarrow SNARK.Prove(pp,x=(\mu, e_{\sigma}),w=(\boldsymbol{\sigma}^{\mathsf{body}},\boldsymbol{\sigma}^{\mathsf{topic}},\boldsymbol{ev},\textbf{w})) \\
+% % &\quad (\mathcal{R} = \{x=(\mu, e_{\sigma}),w=(\boldsymbol{\sigma}^{\mathsf{body}},\boldsymbol{\sigma}^{\mathsf{topic}},\boldsymbol{ev},\textbf{w})\quad|\quad \\
+% % &\quad \ \ e_{\sigma} = H_p(\boldsymbol{\sigma}^{\mathsf{body}}) \land \forall j \in [k], e_j = H_\lambda(j, e_{\sigma}) \\
+% % &\quad \ \ \land \mu = \prod_j (\sigma_j^{\mathsf{body}})^{e_j} \land \mathrm{MSP.Eval}(\textit{topic}, j, \sigma_j^{\mathsf{topic}}) = ev_j \\
+% % &\quad \ \ \land ev_j < \phi(w_j) \})\\ 
+% % &\tau \leftarrow (\mu, e_{\sigma}, ivk, \pi_2) \\
+% % &\text{return } \tau 
+% % \end{align*}
+
+% % \paragraph{Mithril.AVer(avk, m, \tau , w)}
+% % \begin{align*}
+% % % &r_1 \leftarrow \mathsf{SNARK.Verify}(srs, x = (\mu, e_{\sigma}),\pi_2)\\
+% % % &r_2 \leftarrow \mathsf{BLS.Ver}(ivk,\mu,m) \\
+% % % &\textbf{return}\quad r_1 \land r_2
+% % &(\mu, e_{\sigma}, ivk, \pi_2) \leftarrow \tau \\
+% % &b_1 \leftarrow \mathsf{BLS.Ver}(ivk,\mu,m) \\
+% % &b_2 \leftarrow \mathsf{SNARK.Verify}(pp, x = (\mu,e_\sigma), \pi_2)\\
+% % &\textbf{return}\quad b_1 \land b_2
+% % \end{align*}
+
+% % (Here, $ivk$ is explicitly part of $\tau$ and satisfies $ivk = \prod_j vk_j^{e_j}$.)
+
+% % For correctness we require $k = |S|$ to exceed the stake threshold,
+% % e.g., $k \ge \lceil \phi(\textbf{w}) \rceil$, so that the aggregated certificate
+% % encodes a quorum of eligible signers.
+
+
+
+
+
+% \section{Mithril as a Stake-Based Threshold Multisignature}
+% \label{sec:mithril-stms}
+
+% \subsection{Syntax of the Mithril STMS Primitive}
+
+% We fix a total number of participants $N$ and an index set
+% $[N] = \{1,\dots,N\}$. Each participant $i \in [N]$ has an
+% associated (normalized) stake $s_i \in [0,1]$, and we write
+% $\mathbf{s} = (s_1,\dots,s_N)$ for the stake vector. Let
+% $m \in \mathbb{N}$ denote the number of ``seats'' (lotteries)
+% per message and $k \le m$ the threshold parameter. We use
+% a weighting function
+% \[
+%   \varphi : [0,1] \to [0,1]
+% \]
+% as in~\cite{ChaidosMithril}, e.g.\ $\varphi(w) = 1-(1-f)^w$,
+% to map stake to per-seat success probability.
+
+% We assume the BLS scheme $\Pi_{\mathsf{BLS}}$ and Merkle tree
+% $\Pi_{\mathsf{MT}}$ as defined in Section~\ref{sec:prelim},
+% and a dense mapping / eligibility function
+% \[
+%   E : (\textsf{pp}, s_i, msg, j, \sigma) \mapsto \{0,1\}
+% \]
+% obtained from a dense mapping $M$ and $\varphi$ (cf.\ Mithril).
+
+% We define the Mithril STMS primitive as
+% \[
+%   \Pi_{\mathsf{Mithril}}
+%   = (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey},
+%      \mathsf{ACheck}, \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}).
+% \]
+
+% \paragraph{Setup.}
+% \begin{itemize}
+%   \item $\mathsf{pp} \leftarrow \mathsf{Setup}(1^\lambda)$:  
+
+%         run the BLS setup to obtain bilinear groups and hash
+%         $H$, fix Merkle hash $H_{\mathsf{MT}}$, fix parameters
+%         $(m,k,\varphi)$, and fix the eligibility mapping $E$.
+%         Output public parameters
+%         \[
+%           \mathsf{pp} = (\Pi_{\mathsf{BLS}}, \Pi_{\mathsf{MT}},
+%                          m, k, \varphi, E).
+%         \]
+% \end{itemize}
+
+% \paragraph{Key generation.}
+% \begin{itemize}
+%   \item $(sk_i, vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$:  
+
+%         run BLS key generation to obtain a secret key
+%         $sk_i$ and a verification key $vk_i \in G_2$.
+% \end{itemize}
+
+% \paragraph{Aggregate key and registration.}
+% \begin{itemize}
+%   \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk}, \mathbf{s})$:
+
+%         on input a vector of verification keys
+%         $\mathbf{vk} = (vk_1,\dots,vk_N)$ and the stake vector
+%         $\mathbf{s} = (s_1,\dots,s_N)$, define
+%         $\mathsf{reg}_i = (vk_i,s_i)$ for all $i\in[N]$ and
+%         build a Merkle tree over the sequence
+%         $(\mathsf{reg}_1,\dots,\mathsf{reg}_N)$ using
+%         $\Pi_{\mathsf{MT}}$, outputting the root
+%         \[
+%           \mathsf{avk}
+%           \in \{0,1\}^\kappa,
+%         \]
+%         which we refer to as the aggregate verification key.
+
+%   \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk}, vk_i, s_i, path_i)$,
+%         $b \in \{0,1\}$:
+
+%         on input a root $\mathsf{avk}$, a pair $(vk_i,s_i)$ and a
+%         Merkle authentication path $path_i$, recompute the root
+%         using $\Pi_{\mathsf{MT}}.\mathsf{Check}$ and output
+%         \[
+%           b = 1 \;\text{iff}\; (vk_i,s_i)
+%           \text{ is a valid leaf under root } \mathsf{avk}.
+%         \]
+% \end{itemize}
+
+% \paragraph{Stake-based signing (per seat).}
+% \begin{itemize}
+%   \item $\sigma_{i,j} \leftarrow
+%          \mathsf{Sig}(\mathsf{pp}, sk_i, s_i, \mathsf{avk}, msg, j, path_i)$:
+
+%         on input the parameters, party $i$'s secret key $sk_i$,
+%         stake $s_i$ and Merkle path $path_i$, a message $msg$
+%         and a seat index $j \in [m]$,
+%         \begin{enumerate}
+%           \item first check
+%                 $b \leftarrow \mathsf{ACheck}(\mathsf{avk}, vk_i, s_i, path_i)$,
+%                 and abort with $\bot$ if $b=0$;
+%           \item define a bound message
+%                 $msg' = (msg, \mathsf{avk}, j)$ and compute a
+%                 BLS signature
+%                 \[
+%                   \tilde{\sigma}_{i,j}
+%                   \leftarrow \mathsf{Sign}_{\mathsf{BLS}}
+%                              (sk_i, msg');
+%                 \]
+%           \item evaluate the eligibility predicate
+%                 \[
+%                   e_{i,j}
+%                   \leftarrow
+%                   E(\mathsf{pp}, s_i, msg, j, \tilde{\sigma}_{i,j})
+%                   \in \{0,1\};
+%                 \]
+%           \item if $e_{i,j} = 0$, output $\bot$ (not eligible for
+%                 this seat); otherwise output the signature share
+%                 \[
+%                   \sigma_{i,j}
+%                   = (vk_i, s_i, path_i, j, \tilde{\sigma}_{i,j}).
+%                 \]
+%         \end{enumerate}
+% \end{itemize}
+
+% \paragraph{Aggregation.}
+% \begin{itemize}
+%   \item $\tau \leftarrow
+%          \mathsf{ASig}(\mathsf{pp}, \mathsf{avk}, msg, T)$:
+
+%         on input a multiset $T$ of signature shares
+%         $\sigma_{i,j}$ (coming from potentially different
+%         parties and indices $j$), the algorithm
+%         \begin{enumerate}
+%           \item filters $T$ to keep only shares with
+%                 $\mathsf{ACheck}(\mathsf{avk}, vk_i, s_i, path_i)=1$,
+%                 with valid BLS signatures on $msg'=(msg,\mathsf{avk},j)$,
+%                 with $E(\mathsf{pp}, s_i, msg, j, \tilde{\sigma}_{i,j})=1$,
+%                 and with pairwise distinct indices $j$;
+%           \item if the resulting set $T'$ has size $< k$, output
+%                 $\bot$;
+%           \item otherwise, let $I$ be the index set of $T'$ and
+%                 compute the aggregated BLS signature
+%                 \[
+%                   \mu \;=\;
+%                   \prod_{(vk_i,s_i,path_i,j,\tilde{\sigma}_{i,j})\in T'}
+%                   \tilde{\sigma}_{i,j};
+%                 \]
+%           \item output the certificate
+%                 \[
+%                   \tau = (T', \mu).
+%                 \]
+%         \end{enumerate}
+
+%   \item $b \leftarrow
+%          \mathsf{AVer}(\mathsf{pp}, \mathsf{avk}, msg, \tau)$,
+%         where $b \in \{0,1\}$:
+
+%         on input $(\mathsf{avk}, msg, \tau = (T',\mu))$,
+%         the verifier checks that
+%         \begin{enumerate}
+%           \item every share in $T'$ is consistent with
+%                 $\mathsf{avk}$ via $\mathsf{ACheck}$,
+%                 is a valid BLS signature on $msg'=(msg,\mathsf{avk},j)$,
+%                 and satisfies eligibility
+%                 $E(\mathsf{pp}, s_i, msg, j, \tilde{\sigma}_{i,j})=1$;
+%           \item the indices $j$ appearing in $T'$ are pairwise
+%                 distinct and $|T'| \ge k$;
+%           \item writing $PK = \prod_{(vk_i,\dots)\in T'} vk_i$,
+%                 it holds that
+%                 \[
+%                   e(\mu, g_2)
+%                   = e(H(msg'), PK).
+%                 \]
+%         \end{enumerate}
+%         If all checks pass, output $b=1$, otherwise $b=0$.
+% \end{itemize}
+
+\end{document}

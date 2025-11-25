@@ -1,10 +1,10 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.9.18)  4 NOV 2025 14:13
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.9.18)  18 NOV 2025 16:48
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex
-(/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex
+**/Users/wuyun/Documents/Project/bridge-manuscript/2025.11/2025.11.04/snarkifying_mithril.tex
+(/Users/wuyun/Documents/Project/bridge-manuscript/2025.11/2025.11.04/snarkifying_mithril.tex
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
 (/usr/local/texlive/2025/texmf-dist/tex/latex/base/article.cls
@@ -317,54 +317,106 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \@thisruleclass=\count305
 \@lastruleclass=\count306
 \@thisrulewidth=\dimen271
-) (/usr/local/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
-File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count307
-\l__pdf_internal_box=\box65
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amssymb.sty
+Package: amssymb 2013/01/14 v3.01 AMS font symbols
+ (/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amsfonts.sty
+Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
+)) (/usr/local/texlive/2025/texmf-dist/tex/latex/amscls/amsthm.sty
+Package: amsthm 2020/05/29 v2.20.6
+\thm@style=\toks35
+\thm@bodyfont=\toks36
+\thm@headfont=\toks37
+\thm@notefont=\toks38
+\thm@headpunct=\toks39
+\thm@preskip=\skip54
+\thm@postskip=\skip55
+\thm@headsep=\skip56
+\dth@everypar=\toks40
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/mathtools/mathtools.sty
+Package: mathtools 2024/10/04 v1.31 mathematical typesetting tools
+ (/usr/local/texlive/2025/texmf-dist/tex/latex/tools/calc.sty
+Package: calc 2023/07/08 v4.3 Infix arithmetic (KKT,FJ)
+\calc@Acount=\count307
+\calc@Bcount=\count308
+\calc@Adimen=\dimen272
+\calc@Bdimen=\dimen273
+\calc@Askip=\skip57
+\calc@Bskip=\skip58
+LaTeX Info: Redefining \setlength on input line 80.
+LaTeX Info: Redefining \addtolength on input line 81.
+\calc@Ccount=\count309
+\calc@Cskip=\skip59
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/mathtools/mhsetup.sty
+Package: mhsetup 2021/03/18 v1.4 programming setup (MH)
 )
-No file snarkifying_mithril.aux.
+\g_MT_multlinerow_int=\count310
+\l_MT_multwidth_dim=\dimen274
+\origjot=\skip60
+\l_MT_shortvdotswithinadjustabove_dim=\dimen275
+\l_MT_shortvdotswithinadjustbelow_dim=\dimen276
+\l_MT_above_intertext_sep=\dimen277
+\l_MT_below_intertext_sep=\dimen278
+\l_MT_above_shortintertext_sep=\dimen279
+\l_MT_below_shortintertext_sep=\dimen280
+\xmathstrut@box=\box65
+\xmathstrut@dim=\dimen281
+)
+\c@theorem=\count311
+ (/usr/local/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
+File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count312
+\l__pdf_internal_box=\box66
+) (./snarkifying_mithril.aux)
 \openout1 = `snarkifying_mithril.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-(/usr/local/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+ (/usr/local/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count308
-\scratchdimen=\dimen272
-\scratchbox=\box66
-\nofMPsegments=\count309
-\nofMParguments=\count310
-\everyMPshowfont=\toks35
-\MPscratchCnt=\count311
-\MPscratchDim=\dimen273
-\MPnumerator=\count312
-\makeMPintoPDFobject=\count313
-\everyMPtoPDFconversion=\toks36
+\scratchcounter=\count313
+\scratchdimen=\dimen282
+\scratchbox=\box67
+\nofMPsegments=\count314
+\nofMParguments=\count315
+\everyMPshowfont=\toks41
+\MPscratchCnt=\count316
+\MPscratchDim=\dimen283
+\MPnumerator=\count317
+\makeMPintoPDFobject=\count318
+\everyMPtoPDFconversion=\toks42
 ) (/usr/local/texlive/2025/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
  (/usr/local/texlive/2025/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 ))
-Overfull \hbox (3.58324pt too wide) in paragraph at lines 38--39
-\OT1/cmr/m/n/10 A SNARK for a re-la-tion $\OMS/cmsy/m/n/10 R$ \OT1/cmr/m/n/10 is a triple of PPT al-go-rithms $^^E = ([]\OML/cmm/m/it/10 ; []; []\OT1/cmr/m/n/10 )$
- []
-
-
-Overfull \hbox (8.92415pt too wide) detected at line 74
-\OT1/cmr/m/n/10 ^^E[] = ([]\OML/cmm/m/it/10 ; []; []; []; []; []\OT1/cmr/m/n/10 )
+LaTeX Font Info:    Trying to load font information for U+msa on input line 36.
+ (/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 36.
+ (/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+Overfull \hbox (0.65584pt too wide) in paragraph at lines 60--64
+[]$\OML/cmm/m/it/10 pp \OMS/cmsy/m/n/10   []\OT1/cmr/m/n/10 (1[])$: run the group gen-er-a-tor to ob-tain $(\OML/cmm/m/it/10 q; G[]; G[]; G[]; g[]; g[]; e\OT1/cmr/m/n/10 )$
  []
 
 
@@ -372,136 +424,42 @@ Overfull \hbox (8.92415pt too wide) detected at line 74
 [1
 
 {/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}]
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:84: Missing $ inserted.
-<inserted text> 
-                $
-l.84 \begin{align*}
-                   
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
+Overfull \hbox (23.27678pt too wide) in paragraph at lines 101--103
+[]$[] \OMS/cmsy/m/n/10   []\OT1/cmr/m/n/10 ([]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 w\OT1/cmr/m/n/10 )$ : on in-put a vec-tor of ver-i-fi-ca-tion keys $[] = (\OML/cmm/m/it/10 vk[]; [] ; vk[]\OT1/cmr/m/n/10 )$
+ []
 
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:84: Extra }, or forgotten $.
-\@svsechd ...elax \@svsec Mithril.Setup(\lambda )}
-                                                  \csname paragraphmark\endc...
-l.84 \begin{align*}
-                   
-I've deleted a group-closing symbol because it seems to be
-spurious, as in `$x}$'. But perhaps the } is legitimate and
-you forgot something else, as in `\hbox{$x}'. In such cases
-the way to recover is to insert both the forgotten and the
-deleted material, e.g., by typing `I$}'.
 
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:84: Missing $ inserted.
-<inserted text> 
-                $
-l.84 \begin{align*}
-                   
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
+Overfull \hbox (7.37885pt too wide) in paragraph at lines 101--103
+\OT1/cmr/m/n/10 and a match-ing stake vec-tor $\OT1/cmr/bx/n/10 w \OT1/cmr/m/n/10 = (\OML/cmm/m/it/10 w[]; [] ; w[]\OT1/cmr/m/n/10 )$, set leaves $\OML/cmm/m/it/10 `[] \OT1/cmr/m/n/10 := \OML/cmm/m/it/10 H[]\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 vk[]; w[]\OT1/cmr/m/n/10 )$
+ []
 
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:84: Missing } inserted.
-<inserted text> 
-                }
-l.84 \begin{align*}
-                   
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:94: Undefined control sequence.
-<argument>  &sk \leftarrow \mathbb 
-                                   {Z}_q \\ &vk \leftarrow g_1^{sk} \\ &\tex...
-l.94 \end{align*}
-                 
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:94: Undefined control sequence.
-<argument>  &sk \leftarrow \mathbb 
-                                   {Z}_q \\ &vk \leftarrow g_1^{sk} \\ &\tex...
-l.94 \end{align*}
-                 
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <10> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 127.
 
 
 [2]
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:159: Missing $ inserted.
-<inserted text> 
-                $
-l.159 \begin{align*}
-                    
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
 
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:159: Extra }, or forgotten $.
-\@svsechd ...svsec Mithril.AVer(avk, m, \tau , w)}
-                                                  \csname paragraphmark\endc...
-l.159 \begin{align*}
-                    
-I've deleted a group-closing symbol because it seems to be
-spurious, as in `$x}$'. But perhaps the } is legitimate and
-you forgot something else, as in `\hbox{$x}'. In such cases
-the way to recover is to insert both the forgotten and the
-deleted material, e.g., by typing `I$}'.
+[3]
 
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:159: Missing $ inserted.
-<inserted text> 
-                $
-l.159 \begin{align*}
-                    
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
+[4]
 
-/Users/wuyun/Documents/Project/bridge-manuscript/2025.09/2025.09.09/snarkifying_mithril.tex:159: Missing } inserted.
-<inserted text> 
-                }
-l.159 \begin{align*}
-                    
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-
-[3] (./snarkifying_mithril.aux)
+[5] (./snarkifying_mithril.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 12560 strings out of 473190
- 257830 string characters out of 5715800
- 639423 words of memory out of 5000000
- 35601 multiletter control sequences out of 15000+600000
- 569457 words of font info for 73 fonts, out of 8000000 for 9000
+ 13790 strings out of 473190
+ 276703 string characters out of 5715800
+ 646179 words of memory out of 5000000
+ 36804 multiletter control sequences out of 15000+600000
+ 568905 words of font info for 74 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 84i,12n,91p,488b,208s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb>
-Output written on snarkifying_mithril.pdf (3 pages, 210425 bytes).
+ 84i,12n,91p,629b,220s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb>
+Output written on snarkifying_mithril.pdf (5 pages, 192255 bytes).
 PDF statistics:
- 108 PDF objects out of 1000 (max. 8388607)
- 66 compressed objects within 1 object stream
+ 109 PDF objects out of 1000 (max. 8388607)
+ 67 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  13 words of extra memory for PDF output out of 10000 (max. 10000000)
 

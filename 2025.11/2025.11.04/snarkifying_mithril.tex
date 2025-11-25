@@ -1,0 +1,585 @@
+\documentclass{article}
+% \documentclass[twocolumn]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tikz} 
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+
+\newtheorem{theorem}{Theorem}[section]
+
+\newcommand{\mybox}[5]{
+    \begin{center}
+    \begin{tikzpicture}
+        \node[anchor=text,text width=\columnwidth+1.0cm, draw, rounded corners, line width=1pt, fill=#3, inner sep=5mm] (big) {\\#4};
+        \node[draw, rounded corners, line width=.5pt, fill=#2, anchor=west, xshift=5mm] (small) at (big.north west) {#1};
+    \end{tikzpicture}
+    % \caption{#5}
+    \end{center}
+}
+
+
+\title{Mithril in Game-based Syntax}
+
+\author{Wuyunsiqin \quad \quad Bingsheng Zhang \\ 
+Zhejiang University, CHN \\
+oyun@zju.edu.cn \quad bingsheng@zju.edu.cn}
+% \date{May 20 2025}
+
+
+
+
+\begin{document}
+
+\maketitle
+
+
+
+\section{Primitives}
+
+\subsection{BLS Signature Scheme}
+
+Let $\lambda$ be the security parameter. We assume a bilinear group
+generation algorithm which on input $1^\lambda$ outputs
+\[
+(q, G_1, G_2, G_T, g_1, g_2, e),
+\]
+where $G_1,G_2,G_T$ are cyclic groups of prime order $q$, $g_1\in G_1$,
+$g_2\in G_2$ are generators, and
+$e : G_1 \times G_2 \to G_T$ is a bilinear pairing. Let
+$H : \{0,1\}^* \to G_1$ be a hash function modeled as a random oracle.
+
+We write the BLS signature scheme as
+\[
+  \Pi_{\mathsf{BLS}} = (\mathsf{Setup}, \mathsf{KGen}, \mathsf{Sign}, \mathsf{Ver}).
+\]
+
+\begin{itemize}
+  \item $pp \leftarrow\mathsf{Setup}(1^\lambda)$:  
+        run the group generator to obtain
+        $(q, G_1, G_2, G_T, g_1, g_2, e)$ and fix $H$.
+        Output public parameters
+        \[
+          \mathsf{pp} = (q, G_1, G_2, G_T, g_1, g_2, e, H).
+        \]
+
+  \item $(sk,vk) \leftarrow\mathsf{KGen}(\mathsf{pp})$:  
+        sample $sk \xleftarrow{\$} \mathbb{Z}_q$ and set
+        \[
+          vk = g_2^{sk} \in G_2.
+        \]
+        Output the key pair $(sk, vk)$.
+
+  \item $\sigma \leftarrow \mathsf{Sign}(\mathsf{pp}, sk, msg)$:  
+        compute $h \leftarrow H(msg) \in G_1$ and set
+        \[
+          \sigma = h^{sk} \in G_1.
+        \]
+        Output $\sigma$.
+
+  \item $b \leftarrow \mathsf{Ver}(\mathsf{pp}, vk, msg, \sigma)$, where $b \in \{0,1\}$:  
+        compute $h \leftarrow H(msg)$ and output
+        \[
+          b = 1
+          \;\text{iff}\;
+          e(\sigma, g_2) = e(h, vk).
+        \]
+\end{itemize}
+
+\subsection{Merkle Tree}
+Let $H_{\mathsf{MT}}  : \{0,1\}^* \to \{0,1\}^\lambda$ be a collision-resistant hash function.
+
+We denote the Merkle tree primitive by
+\[
+\Pi_{\mathsf{MT}} = (\mathsf{Create}, \mathsf{Check}).
+\]
+
+\begin{itemize}
+
+    \item $\mathsf{avk} \leftarrow \mathsf{Create}(\mathbf{vk}, \mathbf{w})$ : 
+    on input a vector of verification keys $\mathbf{vk} = (vk_1,\dots,vk_N)$ and a matching stake vector $\mathbf{w}=(w_1,\dots,w_N)$, set leaves $\ell_i := H_{\mathsf{MT}} (vk_i , w_i)$ and output the Merkle root $\mathsf{avk}$.
+    
+    \item $b \leftarrow \mathsf{Check}(\mathsf{avk}, vk, w, path)$: on input a root $\mathsf{avk}$, a pair $(vk,w)$, and an authentication path $path$, recompute the root from $\ell := H_{\mathsf{MT}} (vk , w)$ and $path$. Output (b = 1) iff the recomputed root equals $\mathsf{avk}$, and (b = 0) otherwise.
+
+\end{itemize}
+
+
+
+
+\section{Mithril}
+
+\subsection{Syntax}
+A Mithril scheme is a tuple of probabilistic polynomial-time algorithms
+
+Mithril=(PGen,KGen,AKey,ACheck,Sig,Ver,ASig,AVer)
+
+
+
+with the following syntax. Global parameters include: \begin{itemize} \item the number of registered users $n$, \item a stake vector $w = (w[1],\dots,w[n])$ with total stake $w = \sum_i w[i]$, \item an admissible adversarial stake fraction $\alpha \in (0, 1/2)$, \item a number of lotteries $m \in \mathbb{N}$ and an acceptance threshold $k$, determined as a function of $(\kappa, \alpha, w)$, \item a (per-stake) eligibility probability function $\varphi$ induced by the lottery design. \end{itemize}
+
+Messages to be signed have the form $\mathsf{msg} = (\mathsf{topic}, \mathsf{body}, \mathsf{nonce})$, where the \emph{topic} fixes the signing context (e.g., an epoch or slot index) and the \emph{nonce} is used to prevent grinding on the aggregate key.
+
+\begin{description} 
+  \item[$\mathsf{PGen}(1^\kappa)$] outputs public parameters $pp$ and the system-wide lottery parameter $m$. 
+  \item[$\mathsf{KGen}(pp)$] outputs a key pair $(sk_i, vk_i)$ for signer $i$. 
+  \item[$\mathsf{AKey}(VK, w)$] on input a vector of verification keys $VK = (vk_1,\dots,vk_n)$ and a stake vector $w$, outputs an aggregate verification key $avk$ (or $\bot$ on failure). 
+  \item[$\mathsf{ACheck}(VK, w, avk)$] deterministically checks that $avk$ is a valid aggregate key for $(VK,w)$ and returns a bit. 
+  \item[$\mathsf{Sig}(avk, sk_i, j$] is the local signing algorithm for signer $i$ and lottery index $j \in [m]$. It outputs a (possibly empty) local signature $\sigma \in {\bot} \cup \Sigma$ on message $\mathsf{msg}$.
+  \item[$\mathsf{Ver}(VK, w, vk_i, j, \sigma)$] deterministically verifies a local signature $\sigma$ supposedly produced by signer $i$ for lottery index $j$ and returns a bit. 
+  \item[$\mathsf{ASig}(VK, w, \mathsf{msg}, T)$] is the aggregation algorithm. It takes $(VK,w)$, a message $\mathsf{msg}$, and a multiset of signer/signature pairs, and returns an aggregate certificate $\tau$ or $\bot$. 
+  \item[$\mathsf{AVer}(avk, \mathsf{msg}, \tau, w)$] deterministically verifies an aggregate certificate $\tau$ against $avk$, message $\mathsf{msg}$ and total stake $w$. \end{description}
+
+We write $\mathsf{Mithril}[n,w,\alpha]$ for the above scheme together with the global parameters.
+
+
+
+\subsection{Mapping}
+
+We write the Mithril scheme as
+\[
+  \Pi_{\mathsf{Mithril}}
+  =
+  (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck}, \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}).
+\]
+
+\begin{itemize}
+
+  \item $(\mathsf{pp}) \leftarrow \mathsf{Setup}(1^\lambda)$:\\
+        run $\Pi_{\mathsf{BLS}}.\mathsf{Setup}(1^\lambda)$ to obtain $(q,G_1,G_2,G_T,g_1,g_2,e,H)$
+        
+        fix a dense mapping / eligibility function
+        \[
+        Eval : ( msg, index, \sigma) \mapsto \{0,1\},
+        \]
+        % \[
+        %   Eval : G_1 \times \{1,\dots,\mu\} \times \{0,1\}^* \to \{0,1\}^\lambda,
+        % \]
+        a weighting function
+        \[
+          \varphi : \mathbb{N} \to [0,1],
+        \]
+        e.g. $\varphi(w) = 1-(1-f)^w$.
+
+        Index range
+        \[
+          \mu \in \mathbb{N}, 
+        \]
+
+        a quorum or lottery parameter
+        \[
+          k \in \{1,\dots,\mu\}.
+        \]
+        Output
+        \[
+          \mathsf{pp}=(q,G_1,G_2,G_T,g_1,g_2,e,H,Eval,\varphi,\mu,k).
+        \]
+
+  \item $(sk,vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:\\
+        run $\Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp})$ to obtain
+        \[
+          sk \xleftarrow{\$} \mathbb{Z}_q,
+        \]
+        \[
+          vk = g_2^{sk} \in G_2.
+        \]
+        Output $(sk,vk)$.
+
+  \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$:\\
+        given
+        \[
+          \mathbf{vk}=(vk_1,\dots,vk_N),
+        \]
+        \[
+          \mathbf{w}=(w_1,\dots,w_N),
+        \]
+        set
+        \[
+          \mathsf{avk} \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+
+  \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk},\mathbf{vk},\mathbf{w})$, where $b\in\{0,1\}$:\\
+        compute
+        \[
+          avk' \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+        output b=1 iff avk=avk'. 
+
+  \item $\pi \leftarrow \mathsf{Sig}(\mathsf{pp}, vk, w, sk, j, m)$:\\
+        compute the BLS signature
+        \[
+          \sigma \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp}, sk, m),
+        \]
+        compute the eligibility value
+        \[
+          ev \leftarrow Eval(\sigma, j, m),
+        \]
+        and check the threshold
+        % \[
+        %   ev \;<\; \bigl\lfloor \varphi(w)\cdot 2^\lambda \bigr\rfloor.
+        % \]
+        \[
+          ev \;<\;  \varphi(w).
+        \]
+        If true, output
+        \[
+          \pi=(j, \sigma, vk, w).
+        \]
+        Otherwise output $\bot$.
+
+
+
+
+          \item $\tau \leftarrow \mathsf{ASig}(\mathsf{pp}, m, \{\pi_i\}_{i=1}^{t})$:\\
+        parse each
+        \[
+          \pi_i=(j_i,\sigma_i,vk_i,w_i),
+        \]
+        with pairwise distinct
+        \[
+          j_i \in \{1,\dots,\mu\}.
+        \]
+        Set
+        \[
+          \sigma^\star \;=\; \prod_{i=1}^{t} \sigma_i \;\in\; G_1,
+        \]
+        \[
+          vk^\star \;=\; \prod_{i=1}^{t} vk_i \;\in\; G_2.
+        \]
+        Derive a batching seed
+        \[
+          e_\sigma \;\leftarrow\; H\!\bigl(\sigma_1 \,\|\, \cdots \,\|\, \sigma_t \,\bigr),
+        \]
+        and coefficients for $i=1,\dots,t$
+        \[
+          \rho_i \;\leftarrow\; \mathsf{H_\lambda}(e_\sigma \,\|\, i) \in \mathbb{Z}_q^\ast.
+        \]
+        Compute the batch aggregates
+        \[
+          \mu \;=\; \prod_{i=1}^{t} \sigma_i^{\rho_i} \;\in\; G_1,
+        \]
+        \[
+          ivk \;=\; \prod_{i=1}^{t} vk_i^{\rho_i} \;\in\; G_2.
+        \]
+        Output
+        \[
+          \tau \;=\; (\,\sigma^\star,\, vk^\star,\, \mu,\, ivk,\, e_\sigma).
+        \]
+
+  \item $b \leftarrow \mathsf{AVer}(\mathsf{pp}, \mathsf{avk}, m, \tau)$, where $b\in\{0,1\}$:\\
+        parse
+        \[
+          \tau=(\sigma^\star, vk^\star, \mu, ivk, e_\sigma).
+        \]
+        Check that the indices are pairwise distinct.
+        Compute
+        \[
+          h \leftarrow H(m).
+        \]
+        Verify the equation
+        \[
+          e(\sigma^\star, g_2) \;=\; e(h, vk^\star).
+        \]
+        Recompute the batching coefficients for $i=1,\dots,t$
+        \[
+          \rho_i \;\leftarrow\; \mathsf{H}(e_\sigma \,\|\, i) \in \mathbb{Z}_q^\ast,
+        \]
+        and the corresponding aggregated public key
+        \[
+          ivk' \;=\; \prod_{i=1}^{t} vk_i^{\rho_i} \;\in\; G_2.
+        \]
+        Check consistency of the submitted aggregated key
+        \[
+          ivk' \;=\; ivk.
+        \]
+        Verify the batched equation
+        \[
+          e(\mu, g_2) \;=\; e(h, ivk).
+        \]
+        Output
+        \[
+          b \;=\; 1 \text{ iff all checks above hold.}
+        \]
+\end{itemize}
+
+% \subsection{Game-Based Security and Proof for $\Pi_{\mathsf{Mithril}}$}
+
+% \paragraph{Adversarial model.}
+% We consider a PPT adversary $\mathcal{A}$ interacting with a challenger in the multi-user,
+% stake–threshold setting determined by the public parameters
+% $\mathsf{pp}=(q,G_1,G_2,G_T,g_1,g_2,e,H,Eval,\varphi,\mu,k)$ as defined for
+% $\Pi_{\mathsf{Mithril}}$ above.
+% Let $\mathcal{U}=\{1,\dots,N\}$ index the registered users with verification keys
+% $\mathbf{vk}=(vk_1,\dots,vk_N)$ and stakes $\mathbf{w}=(w_1,\dots,w_N)$.
+% A subset $\mathcal{C}\subseteq\mathcal{U}$ is corrupted (under the adversary’s control), and
+% $\mathcal{H}=\mathcal{U}\setminus\mathcal{C}$ are honest users.%
+% \footnote{In this section we ignore membership-binding/Merkle considerations by design (as requested),
+% and focus on unforgeability of the aggregated/signature objects $(\sigma^\star,\mu)$ against the equations checked by $\mathsf{AVer}$.}
+
+% \paragraph{Signing oracle.}
+% For $i\in\mathcal{H}$ (honest), the challenger holds $sk_i$ and answers oracle queries
+% $\mathsf{Sign}(i,j,m)$ by executing $\Pi_{\mathsf{Mithril}}.\mathsf{Sig}$:
+% it computes $\sigma_i\leftarrow \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp},sk_i,m)$,
+% then $ev\leftarrow Eval(\sigma_i,j,m)$ and returns $(j,\sigma_i,vk_i,w_i)$ iff $ev<\varphi(w_i)$, else $\bot$.
+% For $i\in\mathcal{C}$ (corrupt), $\mathcal{A}$ knows $sk_i$ and does not need the oracle.
+
+% \paragraph{Verification oracle.}
+% $\mathcal{A}$ can call $\mathsf{Verify}(m,\tau)$ which returns
+% $\Pi_{\mathsf{Mithril}}.\mathsf{AVer}(\mathsf{pp},\mathsf{avk},m,\tau)\in\{0,1\}$.
+
+% \paragraph{Forgery game $\mathsf{UF}\text{-}\mathsf{CMA}^{\mathsf{agg}}_{\Pi_{\mathsf{Mithril}}}$.}
+% The game proceeds as follows:
+% \begin{enumerate}
+%   \item \textbf{Setup.} The challenger runs $\Pi_{\mathsf{Mithril}}.\mathsf{Setup}(1^\lambda)$ to obtain $\mathsf{pp}$,
+%         samples $\{(sk_i,vk_i)\}_{i\in\mathcal{U}} \xleftarrow{\$} \Pi_{\mathsf{Mithril}}.\mathsf{KGen}(\mathsf{pp})$,
+%         and gives $(\mathsf{pp},\mathbf{vk},\mathbf{w})$ to $\mathcal{A}$.
+%         The set $\mathcal{C}$ of corrupted users is chosen by $\mathcal{A}$ (adaptive or static).
+%   \item \textbf{Queries.} $\mathcal{A}$ adaptively queries $\mathsf{Sign}(i,j,m)$ for any $i\in\mathcal{H}$, $j\in\{1,\dots,\mu\}$, $m\in\{0,1\}^*$;
+%         and $\mathsf{Verify}$ arbitrarily.
+%         Let $\mathcal{Q}$ denote the set of \emph{answered} signature queries that returned a non-$\bot$ tuple.
+%   \item \textbf{Output.} Eventually $\mathcal{A}$ outputs a message $m^\star$ and an aggregate
+%         \[
+%           \tau^\star=(\sigma^\star, vk^\star, \mu, ivk, e_\sigma).
+%         \]
+% \end{enumerate}
+% $\mathcal{A}$ \emph{wins} if all hold:
+% \begin{align}
+%   &\Pi_{\mathsf{Mithril}}.\mathsf{AVer}(\mathsf{pp},\mathsf{avk},m^\star,\tau^\star)=1, \label{eq:ver-accept}\\
+%   &\exists\, i^\star\in\mathcal{H} \;\text{s.t.}\; (i^\star,\,\cdot,\,m^\star)\notin \mathcal{Q} \;\text{ and }\, vk^\star
+%     \text{ is consistent with an aggregation that includes } vk_{i^\star}, \label{eq:fresh-honest}\\
+%   &\text{and the aggregate has quorum size }t\ge k\ \text{(i.e., was derived from at least $k$ distinct indices).} \label{eq:quorum}
+% \end{align}
+% The \emph{advantage} of $\mathcal{A}$ is
+% \[
+%   \mathsf{Adv}^{\mathsf{UF}\text{-}\mathsf{CMA}^{\mathsf{agg}}}_{\Pi_{\mathsf{Mithril}}}(\lambda)
+%   \;=\;
+%   \Pr\bigl[\mathcal{A}\ \text{wins in}\ \mathsf{UF}\text{-}\mathsf{CMA}^{\mathsf{agg}}_{\Pi_{\mathsf{Mithril}}}\bigr].
+% \]
+
+
+
+% \subsection{Game-Based Security and Proof for $\Pi_{\mathsf{Mithril}}$}
+
+% \paragraph{Adversarial model.}
+% We consider a PPT adversary $\mathcal{A}$ interacting with a challenger in the multi-user,
+% stake–threshold setting determined by the public parameters
+% $\mathsf{pp}=(q,G_1,G_2,G_T,g_1,g_2,e,H,Eval,\varphi,\mu,k)$ as defined for
+% $\Pi_{\mathsf{Mithril}}$ above.
+% Let $\mathcal{U}=\{1,\dots,N\}$ index the registered users with verification keys
+% $\mathbf{vk}=(vk_1,\dots,vk_N)$.
+% The corresponding stake vector
+% \[
+%   \mathbf{w}=(w_1,\dots,w_N)\in\mathbb{N}^N
+% \]
+% is assumed to be fixed by the environment \emph{a priori} and given as an
+% external input to the challenger; it is also made public to~$\mathcal{A}$.
+% We interpret $w_i$ as the stake associated with $vk_i$ for user $i\in\mathcal{U}$.
+% A subset $\mathcal{C}\subseteq\mathcal{U}$ is corrupted (under the adversary’s control), and
+% $\mathcal{H}=\mathcal{U}\setminus\mathcal{C}$ are honest users.%
+% % \footnote{In this section we ignore membership-binding/Merkle considerations by design,
+% % and focus on unforgeability of the aggregated/signature objects $(\sigma^\star,\mu)$
+% % against the equations checked by $\mathsf{AVer}$.}
+
+% \paragraph{Signing oracle.}
+% For each $i\in\mathcal{H}$, the challenger holds $(sk_i,vk_i,w_i)$.
+% On input a query $\mathsf{Sign}(i,j,m)$ with $i\in\mathcal{H}$,
+% $j\in\{1,\dots,\mu\}$ and $m\in\{0,1\}^*$, the oracle runs
+% \[
+%   \pi \;\leftarrow\; \Pi_{\mathsf{Mithril}}.\mathsf{Sig}
+%       \bigl(\mathsf{pp},vk,w,sk_i,j,m\bigr).
+% \]
+% If $\pi=\bot$, the oracle returns $\bot$ and the query is not recorded.
+% Otherwise $\pi=(j,\sigma_i,vk_i,w_i)$ is returned to $\mathcal{A}$ and the
+% triple $(i,j,m)$ is added to the set of answered queries~$\mathcal{Q}$.
+% For $i\in\mathcal{C}$, $\mathcal{A}$ knows $sk_i$ and can locally run
+% $\Pi_{\mathsf{Mithril}}.\mathsf{Sig}$; thus the signing oracle is only
+% defined for $i\in\mathcal{H}$.
+
+% \paragraph{Verification oracle.}
+% $\mathcal{A}$ can call $\mathsf{Verify}(m,\tau)$ which returns
+% \[
+%   \Pi_{\mathsf{Mithril}}.\mathsf{AVer}(\mathsf{pp},\mathsf{avk},m,\tau)\in\{0,1\}.
+% \]
+
+% \paragraph{Forgery game $\mathsf{UF}\text{-}\mathsf{CMA}^{\mathsf{agg}}_{\Pi_{\mathsf{Mithril}}}$.}
+% The game proceeds as follows:
+% \begin{enumerate}
+%   \item \textbf{Setup.}
+%         The challenger receives the externally fixed stake vector
+%         $\mathbf{w}=(w_1,\dots,w_N)$ as input and runs
+%         $\Pi_{\mathsf{Mithril}}.\mathsf{Setup}(1^\lambda)$ to obtain $\mathsf{pp}$.
+%         It then samples
+%         \[
+%           \{(sk_i,vk_i)\}_{i\in\mathcal{U}} \xleftarrow{\$}
+%           \Pi_{\mathsf{Mithril}}.\mathsf{KGen}(\mathsf{pp}),
+%         \]
+%         and computes the aggregate verification key
+%         \[
+%           \mathsf{avk} \;\leftarrow\;
+%           \Pi_{\mathsf{Mithril}}.\mathsf{AKey}(\mathbf{vk},\mathbf{w}).
+%         \]
+%         The challenger gives $(\mathsf{pp},\mathsf{avk},\mathbf{vk},\mathbf{w})$ to $\mathcal{A}$.
+%         The set $\mathcal{C}$ of corrupted users is chosen by $\mathcal{A}$.
+
+%   \item \textbf{Queries.}
+%         $\mathcal{A}$ adaptively issues signing queries
+%         $\mathsf{Sign}(i,j,m)$ for any $i\in\mathcal{H}$, $j\in\{1,\dots,\mu\}$,
+%         $m\in\{0,1\}^*$, which are answered by the Mithril signing algorithm
+%         $\Pi_{\mathsf{Mithril}}.\mathsf{Sig}$ as defined above; let
+%         $\mathcal{Q}$ denote the set of triples $(i,j,m)$ for which the oracle
+%         returned a non-$\bot$ tuple.
+%         In addition, $\mathcal{A}$ may query the verification oracle
+%         $\mathsf{Verify}(m,\tau)$ arbitrarily.
+%         Since $\Pi_{\mathsf{Mithril}}.\mathsf{ASig}$ is a public algorithm,
+%         $\mathcal{A}$ is free to aggregate any collection of partial proofs
+%         (including signatures of corrupted users and oracle answers) into
+%         Mithril aggregates on its own.
+
+%   \item \textbf{Output.}
+%         Eventually $\mathcal{A}$ outputs a message $m^\star$ and an aggregate
+%         \[
+%           \tau^\star=(\sigma^\star, vk^\star, \mu, ivk, e_\sigma),
+%         \]
+%         which is syntactically a candidate output of
+%         $\Pi_{\mathsf{Mithril}}.\mathsf{ASig}$ for some multiset of partial
+%         tuples $(j_i,\sigma_i,vk_i,w_i)$ with $vk_i\in\mathbf{vk}$ and
+%         $w_i\in\mathbf{w}$.
+% \end{enumerate}
+% $\mathcal{A}$ \emph{wins} if all of the following hold:
+% \begin{align}
+%   &\Pi_{\mathsf{Mithril}}.\mathsf{AVer}(\mathsf{pp},\mathsf{avk},m^\star,\tau^\star)=1, \label{eq:ver-accept}\\[0.25em]
+%   &\exists\, i^\star\in\mathcal{H} \;\text{s.t.}\;
+%     (i^\star,\,\cdot,\,m^\star)\notin \mathcal{Q}
+%     \;\text{ and }\, vk^\star \text{ is consistent with an aggregation that}\\[-0.35em]
+%   &\qquad\text{includes the honest pair }(vk_{i^\star},w_{i^\star})
+%     \text{ taken from }(\mathbf{vk},\mathbf{w}), \label{eq:fresh-honest}\\[0.25em]
+%   &\text{and the aggregate has quorum size }t\ge k,\ \text{that is, } \tau^\star
+%     \text{ can be written as a valid output of} \nonumber\\[-0.35em]
+%   &\qquad
+%     \Pi_{\mathsf{Mithril}}.\mathsf{ASig}\bigl(\mathsf{pp},m^\star,\{\pi_i\}_{i=1}^{t}\bigr)
+%     \text{ for some $t\ge k$ with pairwise distinct indices,} \nonumber\\[-0.35em]
+%   &\qquad
+%     \text{where each }\pi_i=(j_i,\sigma_i,vk_i,w_i)\text{ uses $(vk_i,w_i)$
+%     from }(\mathbf{vk},\mathbf{w}). \label{eq:quorum}
+% \end{align}
+% The \emph{advantage} of $\mathcal{A}$ is
+% \[
+%   \mathsf{Adv}^{\mathsf{UF}\text{-}\mathsf{CMA}^{\mathsf{agg}}}_{\Pi_{\mathsf{Mithril}}}(\lambda)
+%   \;=\;
+%   \Pr\bigl[\mathcal{A}\ \text{wins in}\ \mathsf{UF}\text{-}\mathsf{CMA}^{\mathsf{agg}}_{\Pi_{\mathsf{Mithril}}}\bigr].
+% \]
+
+% \paragraph{Discussion of condition.}
+% Since $\tau^\star$ in our minimal certificate does not carry the explicit constituent list,
+% the win condition requires \emph{existence of a decomposition} of $(\sigma^\star,vk^\star,\mu,ivk)$
+% into $t$ per-user contributions that includes at least one honest key $vk_{i^\star}$ for which $m^\star$
+% was never answered by the signing oracle. This is the standard multi-user freshness requirement
+% adapted to our “ASig+BSig-only” certificate: the aggregate must \emph{explain} to a valid multiset of $t$ signers.
+
+% \subsubsection*{Security Assumptions}
+% \begin{itemize}
+%   \item (\textbf{BLS-EUF-CMA in ROM}) The BLS scheme $\Pi_{\mathsf{BLS}}$ is existentially unforgeable under chosen-message attack in the random-oracle model for $H$.
+%   \item (\textbf{Batch soundness}) The random-oracle–derived coefficients $\rho_i\leftarrow \mathsf{H_\lambda}(e_\sigma\|i)$ yield a standard batch-verification bound:
+%         for any set containing at least one invalid BLS signature on $m$, the acceptance probability of
+%         \[
+%           e(\mu,g_2)=e(H(m),ivk)
+%         \]
+%         is at most $1/q$ over random coins of the oracle (Schwartz–Zippel–type bound).
+% \end{itemize}
+
+% \subsubsection*{Main Theorem}
+% \begin{theorem}[Unforgeability of $\Pi_{\mathsf{Mithril}}$ (PSC, no-membership)]
+% \label{thm:mithril-ufcma}
+% Assume $\Pi_{\mathsf{BLS}}$ is EUF-CMA secure in the ROM and batch soundness holds as above.
+% Let $\mathcal{A}$ be any PPT adversary against $\mathsf{UF}\text{-}\mathsf{CMA}^{\mathsf{agg}}_{\Pi_{\mathsf{Mithril}}}$ with success probability
+% $\varepsilon(\lambda)$. Then there exists a PPT forger $\mathcal{B}$ against $\Pi_{\mathsf{BLS}}$ such that
+% \[
+%   \mathsf{Adv}^{\mathsf{euf\text{-}cma}}_{\Pi_{\mathsf{BLS}}}(\lambda)
+%   \;\;\ge\;\;
+%   \varepsilon(\lambda)\;-\;\tfrac{1}{q}\;-\;\mathsf{negl}(\lambda).
+% \]
+% \end{theorem}
+
+% \begin{proof}[Proof (Sketch, Game Hops)]
+% We build $\mathcal{B}$ that receives a BLS challenge verification key $vk^\dagger$ and access to the BLS random oracle $H$.
+% It must output a forgery $(m^\star,\sigma^\dagger)$ with $e(\sigma^\dagger,g_2)=e(H(m^\star),vk^\dagger)$ and with $m^\star$
+% fresh for $vk^\dagger$.
+
+% \smallskip\noindent\textbf{Game~0 (Real).}
+% This is the real game $\mathsf{UF}\text{-}\mathsf{CMA}^{\mathsf{agg}}_{\Pi_{\mathsf{Mithril}}}$.
+% Let $\Pr[\mathsf{G0}]=\varepsilon$.
+
+% \smallskip\noindent\textbf{Game~1 (Replace batch by individual checks).}
+% Modify $\mathsf{AVer}$ so that, conceptually, it verifies each constituent signature individually rather than via the batched
+% equation $e(\mu,g_2)=e(H(m),ivk)$.
+% By batch soundness, the difference in acceptance probability is bounded by $1/q$:
+% \[
+%   \bigl|\Pr[\mathsf{G1}]-\Pr[\mathsf{G0}]\bigr|\;\le\;1/q.
+% \]
+% In particular, any aggregate that passes $\mathsf{AVer}$ in Game~0 but would fail individual checks occurs with probability $\le 1/q$.
+
+% \smallskip\noindent\textbf{Game~2 (Embedding a BLS target key).}
+% $\mathcal{B}$ chooses an honest index $i^\star\in\mathcal{H}$ uniformly at random and \emph{sets} $vk_{i^\star}:=vk^\dagger$ (the BLS challenge key).
+% For $i\neq i^\star$, $\mathcal{B}$ samples $(sk_i,vk_i)\xleftarrow{\$}\Pi_{\mathsf{BLS}}.\mathsf{KGen}$ and knows $sk_i$.
+% $\mathcal{B}$ perfectly simulates all $\mathsf{Sign}(i,j,m)$ queries for $i\neq i^\star$.
+% For $i=i^\star$, $\mathcal{B}$ never returns a non-$\bot$ signature on any $m$—it answers $\bot$ (i.e., “not eligible”).
+% Since the oracle for $i^\star$ never returns a signature, the adversary cannot obtain $\sigma_{i^\star}$ from the challenger,
+% and the distribution of oracle answers is indistinguishable to $\mathcal{A}$ (no $\sigma_{i^\star}$ values are revealed).
+% Thus $\Pr[\mathsf{G2}]=\Pr[\mathsf{G1}]$.
+
+% \smallskip\noindent\textbf{From a winning forgery to a BLS forgery.}
+% Suppose $\mathcal{A}$ wins in Game~2 with output $(m^\star,\tau^\star)$ where
+% $\tau^\star=(\sigma^\star, vk^\star, \mu, ivk, e_\sigma)$,
+% and where a valid decomposition includes exactly $t\ge k$ signers and (by the win condition) at least one honest signer.
+% Condition ensures that with probability at least $1/t$ over the random choice of $i^\star$,
+% the included honest signer is precisely $i^\star$ and \emph{no other} honest signer appears in the decomposition.%
+% % \footnote{If multiple honest signers are present, standard multi-user reductions incur a factor of their count; bounding this by $t$ gives the $1/t$ factor.}
+% Condition  and Game~1 imply the individual BLS equations hold for all constituents; in particular,
+% \[
+%   e(\sigma^\star, g_2)\;=\; \prod_{i=1}^{t} e(H(m^\star), vk_i)
+%   \quad\Longleftrightarrow\quad
+%   \sigma^\star \;=\; \prod_{i=1}^{t} \sigma_i,
+% \]
+% with each $\sigma_i=H(m^\star)^{sk_i}$ the unique BLS signature under $vk_i=g_2^{sk_i}$.
+% Since $\mathcal{B}$ knows $sk_i$ for all corrupted signers in the decomposition, it can compute
+% \[
+%   \widehat{\sigma}
+%   \;:=\;
+%   \sigma^\star \cdot
+%   \left(\prod_{i\in\mathcal{C}\cap S^\star} H(m^\star)^{sk_i}\right)^{-1}
+%   \;=\;
+%   H(m^\star)^{sk_{i^\star}}
+%   \;\in\; G_1,
+% \]
+% where $S^\star$ is the forged signer set (whose existence follows from the win condition).
+% Thus $(m^\star,\widehat{\sigma})$ is a valid BLS signature under $vk_{i^\star}=vk^\dagger$.
+% Moreover, by freshness, $\mathcal{A}$ never obtained a valid signature on $m^\star$ for $vk_{i^\star}$ from the oracle,
+% so $\mathcal{B}$ outputs a valid EUF-CMA forgery for $\Pi_{\mathsf{BLS}}$.
+
+% \smallskip\noindent\textbf{Success probability.}
+% Conditioned on the event that exactly one honest signer appears in the forged aggregate and it is $i^\star$,
+% $\mathcal{B}$ succeeds with probability $\Pr[\mathsf{G2}]$.
+% Accounting for the random choice of $i^\star$ and the standard loss due to batch-to-individual switch, we get
+% \[
+%   \mathsf{Adv}^{\mathsf{euf\text{-}cma}}_{\Pi_{\mathsf{BLS}}}(\lambda)
+%   \;\ge\;
+%   \Pr[\mathsf{G2}]\cdot \tfrac{1}{t}\;-\;\tfrac{1}{q}
+%   \;\ge\;
+%   \varepsilon(\lambda)\;-\;\tfrac{1}{q}\;-\;\mathsf{negl}(\lambda),
+% \]
+% where we absorb the $1/t$ factor (bounded by a constant when $k$ is fixed or by the adversary’s success definition) into the negligible term by standard averaging or by defining the advantage per fixed $t$.
+% This yields the stated bound and completes the reduction.
+% \end{proof}
+
+% \paragraph{Remark on eligibility and quorum.}
+% The signing oracle enforces eligibility via $Eval$ and $\varphi$, ensuring that $\mathcal{A}$ cannot obtain an honest signature on $m^\star$
+% for $vk_{i^\star}$ from the challenger.
+% Although $\mathsf{AVer}$ (by our minimal certificate) does not re-check per-share eligibility,
+% the unforgeability reduction above depends only on the BLS uniqueness and the acceptance of the pairwise equations checked by $\mathsf{AVer}$.
+% The quorum condition $t\ge k$ is treated syntactically in the win condition.
+% If one reinstates per-share evidence (e.g., includes the constituent list and indices),
+% the same reduction goes through without the $1/t$ guessing loss and with tighter bounds.
+
+
+\end{document}

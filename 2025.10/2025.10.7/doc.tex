@@ -1,0 +1,189 @@
+\documentclass{article}
+% \documentclass[twocolumn]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tikz} 
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{array}
+
+\newcommand{\mybox}[5]{
+    \begin{center}
+    \begin{tikzpicture}
+        \node[anchor=text,text width=\columnwidth+1.0cm, draw, rounded corners, line width=1pt, fill=#3, inner sep=5mm] (big) {\\#4};
+        \node[draw, rounded corners, line width=.5pt, fill=#2, anchor=west, xshift=5mm] (small) at (big.north west) {#1};
+    \end{tikzpicture}
+    % \caption{#5}
+    \end{center}
+}
+
+
+\title{25.10.21 Mithril circuit in Halo2-lib }
+
+\author{Wuyunsiqin \quad \quad Bingsheng Zhang \\ 
+Zhejiang University, CHN \\
+22521299@zju.edu.cn \quad bingsheng@zju.edu.cn}
+% \date{May 20 2025}
+
+
+
+
+\begin{document}
+
+\maketitle
+
+
+
+\section{Snarkifying Mithril }
+
+This section implements a Halo2-based zero-knowledge cross-chain protocol instantiated with Mithril. The circuit covers: (i) unweighted BLS multisignature aggregation ($\mathsf{MSP.A}$), (ii) seed-weighted BLS aggregation ($\mathsf{MSP.B}$), (iii) lottery index range \& uniqueness checks, (iv) eligibility/threshold checks against stake, and (v) Merkle membership checks for registered signers. The experimental environment matches the previous section.
+
+\subsection{Experimental Tasks}
+\begin{itemize}
+  \item \textbf{MSP.A (baseline aggregation).} Implements the straightforward BLS aggregation and in-circuit pairing check $e(\mu,g_2) = e(H_{\mathbb{G}_1}(\text{"M"}\Vert msg), ivk)$. We measure proving time, proof size, and verification time as the number of aggregated signatures grows.
+  \item \textbf{MSP.B (seed-weighted aggregation).} Extends aggregation with per-signer short exponents $e_i \leftarrow H_\lambda(i,e_{\boldsymbol{\sigma}})$ and $(\mu,e_{\boldsymbol{\sigma}})$ where $e_{\boldsymbol{\sigma}}\leftarrow H_p(\boldsymbol{\sigma})$. The circuit proves the weighted pairing equation. We observe higher proving cost due to hashing and multi-scalar multiplications (MSMs) with weights.
+  \item \textbf{Lottery index check.} Ensures $\mathsf{index}_i\!\le m$ for all $i$ and $\mathsf{index}_i\!\ne\!\mathsf{index}_j$ for $i\ne j$. The uniqueness constraint induces $O(n^2)$ comparisons; we report scaling behavior.
+  \item \textbf{Eligibility/threshold check.} For each signer, enforces $ev_i=\mathsf{MSP.Eval}(\mathsf{topic},\mathsf{index}_i,\sigma_i)$ and $ev_i \le \phi(\mathsf{stake}_i)$. The circuit cost grows roughly linearly in the number of checked signers.
+\end{itemize}
+
+\subsection{Experimental Results and Performance Analysis}
+
+We benchmarked the Halo2-based Mithril circuit using the configuration files \texttt{mithril\_bench.csv}, \texttt{bls\_signature\_bench.csv}, \texttt{msp\_msm\_bench.csv}, \texttt{merkle\_tree\_bench.csv}, and \texttt{index\_check\_bench.csv}. All timings have been normalized to seconds (s) for proving time and to milliseconds (ms) for verification time.
+
+\paragraph{Overall Performance.}
+Table below summarizes the end-to-end Mithril proof generation and verification performance across different numbers of participating signers.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{cccc}
+\toprule
+\textbf{Signers} & \textbf{Proving Time (s)} & \textbf{Proof Size (bytes)} & \textbf{Verification Time (ms)} \\
+\midrule
+2   & 27.49 & 7136  & 3.08 \\
+4   & 29.27 & 7712  & 3.06 \\
+8   & 31.65 & 8512  & 3.11 \\
+16  & 39.47 & 10944 & 3.57 \\
+32  & 49.85 & 14528 & 3.98 \\
+64  & 72.25 & 21984 & 5.13 \\
+128 & 125.54 & 37312 & 7.25 \\
+\bottomrule
+\end{tabular}
+\caption{Mithril end-to-end proving performance as the number of signers increases.}
+\label{tab:mithril-bench}
+\end{table}
+
+\paragraph{Module Breakdown.}
+To understand the contribution of each subcircuit, we compare the proving and verification performance across all Mithril components under similar configuration parameters.
+
+
+\noindent
+MSP/MSM exhibits the steepest growth in proving time and proof size as aggregation size increases, while the BLS and Merkle subcircuits remain relatively stable. Verification cost remains within a few milliseconds across all modules, indicating that the bottleneck lies in prover-side multi-scalar arithmetic and constraint generation rather than verification logic.
+
+% --- Optional per-module subtables (can be commented out if concise view preferred) ---
+% \begin{table}[h]
+% \centering
+% \small
+% \begin{tabular}{rccc}
+% \toprule
+% \textbf{Signers (Mithril)} & \textbf{Proving Time (s)} & \textbf{Proof Size (bytes)} & \textbf{Verification Time (ms)} \\
+% \midrule
+% 2 & 27.49 & 7136 & 3.08 \\
+% 4 & 29.27 & 7712 & 3.06 \\
+% 8 & 31.65 & 8512 & 3.11 \\
+% 16 & 39.47 & 10944 & 3.57 \\
+% 32 & 49.85 & 14528 & 3.98 \\
+% 64 & 72.25 & 21984 & 5.13 \\
+% 128 & 125.54 & 37312 & 7.25 \\
+% \bottomrule
+% \end{tabular}
+% \caption{Mithril overall proving and verification performance by signer count.}
+% \label{tab:mithril-detailed}
+% \end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{cccc}
+\toprule
+\textbf{Size} & \textbf{Proving Time (s)} & \textbf{Proof Size (bytes)} & \textbf{Verification Time (ms)} \\
+\midrule
+2 & 9.29 & 11520 & 4.24 \\
+4 & 9.22 & 11520 & 3.93 \\
+8 & 10.26 & 12000 & 3.67 \\
+16 & 10.16 & 12224 & 3.66 \\
+32 & 10.42 & 12576 & 4.01 \\
+64 & 10.46 & 12800 & 4.12 \\
+128 & 11.70 & 14080 & 5.39 \\
+\bottomrule
+\end{tabular}
+\caption{BLS aggregation benchmark results.}
+\label{tab:bls-detailed}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{cccc}
+\toprule
+\textbf{Size} & \textbf{Proving Time (s)} & \textbf{Proof Size (bytes)} & \textbf{Verification Time (ms)} \\
+\midrule
+8 & 19.20 & 5856 & 2.61 \\
+16 & 25.36 & 7936 & 3.03 \\
+32 & 34.74 & 10944 & 3.41 \\
+64 & 54.33 & 17312 & 4.49 \\
+128 & 99.04 & 30240 & 6.57 \\
+256 & 217.43 & 55744 & 11.52 \\
+\bottomrule
+\end{tabular}
+\caption{MSP/MSM proving and verification benchmarks.}
+\label{tab:mspmsm-detailed}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{cccc}
+\toprule
+\textbf{Size} & \textbf{Proving Time (s)} & \textbf{Proof Size (bytes)} & \textbf{Verification Time (ms)} \\
+\midrule
+16 & 3.82 & 1056 & 1.75 \\
+32 & 5.14 & 1408 & 1.99 \\
+48 & 6.71 & 2112 & 2.08 \\
+64 & 7.58 & 2464 & 2.08 \\
+80 & 8.77 & 2816 & 2.08 \\
+96 & 10.58 & 3520 & 2.23 \\
+112 & 11.24 & 3872 & 2.30 \\
+128 & 12.74 & 4576 & 2.53 \\
+\bottomrule
+\end{tabular}
+\caption{Merkle tree membership circuit benchmarks.}
+\label{tab:merkle-detailed}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{cccc}
+\toprule
+\textbf{Size} & \textbf{Proving Time (s)} & \textbf{Proof Size (bytes)} & \textbf{Verification Time (ms)} \\
+\midrule
+2 & 2.37 & 960 & 2.04 \\
+4 & 2.46 & 960 & 1.71 \\
+8 & 2.42 & 960 & 1.77 \\
+16 & 2.41 & 960 & 1.83 \\
+32 & 2.46 & 960 & 1.90 \\
+64 & 2.43 & 960 & 1.74 \\
+128 & 2.49 & 960 & 1.82 \\
+256 & 3.62 & 1920 & 1.93 \\
+\bottomrule
+\end{tabular}
+\caption{Index range and uniqueness check benchmarks.}
+\label{tab:indexcheck-detailed}
+\end{table}
+
+\noindent
+The above tables illustrate the relative performance scaling for each subcircuit. Among them, the MSP/MSM stage remains the dominant performance bottleneck, contributing most to both proving time and proof size growth. The other modules, though lightweight, are still crucial for correctness and should be optimized primarily for constraint reuse rather than raw speed.
+
+
+\end{document}

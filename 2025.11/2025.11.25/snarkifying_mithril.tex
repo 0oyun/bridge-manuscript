@@ -1,0 +1,656 @@
+\documentclass{article}
+% \documentclass[twocolumn]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tikz} 
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+
+\newtheorem{theorem}{Theorem}[section]
+
+\newcommand{\mybox}[5]{
+    \begin{center}
+    \begin{tikzpicture}
+        \node[anchor=text,text width=\columnwidth+1.0cm, draw, rounded corners, line width=1pt, fill=#3, inner sep=5mm] (big) {\\#4};
+        \node[draw, rounded corners, line width=.5pt, fill=#2, anchor=west, xshift=5mm] (small) at (big.north west) {#1};
+    \end{tikzpicture}
+    % \caption{#5}
+    \end{center}
+}
+
+
+\title{Mithril in Game-based Syntax}
+
+\author{Wuyunsiqin \quad \quad Bingsheng Zhang \\ 
+Zhejiang University \\
+oyun@zju.edu.cn \quad bingsheng@zju.edu.cn}
+% \date{May 20 2025}
+
+
+
+
+\begin{document}
+
+\maketitle
+
+
+
+\section{Primitives}
+
+\subsection{BLS Signature Scheme}
+
+Let $\lambda$ be the security parameter. We assume a bilinear group
+generation algorithm which on input $1^\lambda$ outputs
+\[
+(q, G_1, G_2, G_T, g_1, g_2, e),
+\]
+where $G_1,G_2,G_T$ are cyclic groups of prime order $q$, $g_1\in G_1$,
+$g_2\in G_2$ are generators, and
+$e : G_1 \times G_2 \to G_T$ is a bilinear pairing. Let
+$H : \{0,1\}^* \to G_1$ be a hash function modeled as a random oracle.
+
+We write the BLS signature scheme as
+\[
+  \Pi_{\mathsf{BLS}} = (\mathsf{Setup}, \mathsf{KGen}, \mathsf{Sign}, \mathsf{Ver}).
+\]
+
+\begin{itemize}
+  \item $pp \leftarrow\mathsf{Setup}(1^\lambda)$:  
+        run the group generator to obtain
+        $(q, G_1, G_2, G_T, g_1, g_2, e)$ and fix $H$.
+        Output public parameters
+        \[
+          \mathsf{pp} = (q, G_1, G_2, G_T, g_1, g_2, e, H).
+        \]
+
+  \item $(sk,vk) \leftarrow\mathsf{KGen}(\mathsf{pp})$:  
+        sample $sk \xleftarrow{\$} \mathbb{Z}_q$ and set
+        \[
+          vk = g_2^{sk} \in G_2.
+        \]
+        Output the key pair $(sk, vk)$.
+
+  \item $\sigma \leftarrow \mathsf{Sign}(\mathsf{pp}, sk, msg)$:  
+        compute $h \leftarrow H(msg) \in G_1$ and set
+        \[
+          \sigma = h^{sk} \in G_1.
+        \]
+        Output $\sigma$.
+
+  \item $b \leftarrow \mathsf{Ver}(\mathsf{pp}, vk, msg, \sigma)$, where $b \in \{0,1\}$:  
+        compute $h \leftarrow H(msg)$ and output
+        \[
+          b = 1
+          \;\text{iff}\;
+          e(\sigma, g_2) = e(h, vk).
+        \]
+\end{itemize}
+
+\subsection{Merkle Tree}
+Let $H_{\mathsf{MT}}  : \{0,1\}^* \to \{0,1\}^\lambda$ be a collision-resistant hash function.
+
+We denote the Merkle tree primitive by
+\[
+\Pi_{\mathsf{MT}} = (\mathsf{Create}, \mathsf{Check}).
+\]
+
+\begin{itemize}
+
+    \item $\mathsf{avk} \leftarrow \mathsf{Create}(\mathbf{vk}, \mathbf{w})$ : 
+    on input a vector of verification keys $\mathbf{vk} = (vk_1,\dots,vk_N)$ and a matching stake vector $\mathbf{w}=(w_1,\dots,w_N)$, set leaves $\ell_i := H_{\mathsf{MT}} (vk_i , w_i)$ and output the Merkle root $\mathsf{avk}$.
+    
+    \item $b \leftarrow \mathsf{Check}(\mathsf{avk}, vk, w, path)$: on input a root $\mathsf{avk}$, a pair $(vk,w)$, and an authentication path $path$, recompute the root from $\ell := H_{\mathsf{MT}} (vk , w)$ and $path$. Output (b = 1) iff the recomputed root equals $\mathsf{avk}$, and (b = 0) otherwise.
+
+\end{itemize}
+
+
+\section{Stake-based threshold multi-signature}
+
+\subsection{Syntax}
+
+We model Mithril as an $\alpha$-STMS whose acceptance is determined on a \emph{stake} basis via a ``$t$ wins in $n$ lotteries'' parametrization. 
+% Messages are tuples
+% $m=(m.\textsf{topic},\,m.\textsf{body})$; eligibility depends on $m.\textsf{topic}$ (and a lottery index) but not on $m.\textsf{body}$.
+
+\[
+  \Pi_{\mathsf{STMS}}
+  =
+  (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck},
+   \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}) .
+\]
+
+\paragraph{$\mathsf{Setup}(1^\lambda) \rightarrow (\mathsf{pp},\, n)$.}
+% \[
+%   \mathsf{Setup}(1^\lambda) \rightarrow (\mathsf{pp},\, m)
+% \]
+On input a security parameter, outputs system parameters $\mathsf{pp}$ and a lottery parameter $n\in\mathbb{N}$ (the number of lotteries). 
+% These are implicit inputs to all other algorithms.
+
+\paragraph{$\mathsf{KGen}(\mathsf{pp}) \rightarrow (sk,\, vk)$.}
+% \[
+%   \mathsf{KGen}(\mathsf{pp}) \rightarrow (sk,\, vk)
+% \]
+Generates a signing/verification key pair.
+
+\paragraph{$\mathsf{AKey}(\mathbf{vk},\, \mathbf{w}) \rightarrow \mathsf{avk}$.}
+% \[
+%   \mathsf{AKey}(\mathbf{vk},\, \mathbf{w}) \rightarrow \mathsf{avk}
+% \]
+Given a list of verification keys $\mathbf{vk} :=(vk_1,\ldots,vk_N)$ and a matching stake vector $\mathbf{w} :=(w_1,\ldots,w_N)$, deterministically produces an aggregate verification key $\mathsf{avk}$.
+//todo: define N
+\paragraph{$\mathsf{ACheck}(\mathsf{avk},\, \mathbf{vk},\, \mathbf{w}) \rightarrow b \in \{0,1\}$.}
+% \[
+%   \mathsf{ACheck}(\mathsf{avk},\, \mathbf{vk},\, \mathbf{w}) \rightarrow b \in \{0,1\}
+% \]
+Deterministically checks whether $\mathsf{avk}$ is the correct aggregate key for $(\mathbf{vk},\mathbf{w})$.
+
+\paragraph{$\mathsf{Sig}(vk,\, w,\, sk,\, j,\, m) \rightarrow \sigma \;$.}
+% \[
+%   \mathsf{Sig}(vk,\, w,\, sk,\, j,\, m) \rightarrow \sigma \;
+%   % \in\; \Sigma \cup \{\bot\}
+% \]
+Attempts to produce a local proof $\sigma$ for message $n$ and lottery index $j\in\{1,\ldots,n\}$ on behalf of a user with key pair $(sk,vk)$ and stake $w$. It outputs $\bot$ if the user is ineligible for $(m,j)$ under stake $w$.
+
+\paragraph{$\mathsf{ASig}(\mathbf{vk},\, \mathbf{w},\, m,\, \{(vk_i,\sigma_i)\}_{i=1}^{t})
+  \rightarrow \tau $.}
+% \[
+%   \mathsf{ASig}(\mathbf{vk},\, \mathbf{w},\, m,\, \{(vk_i,\sigma_i)\}_{i=1}^{t})
+%   \rightarrow \tau 
+%   % \;\in\; \mathcal{T} \cup \{\bot\}
+% \]
+Given $(\mathbf{vk},\mathbf{w})$, a message $m$, and a multiset of signer/signature pairs with pairwise-distinct lottery indices, aggregates them into a threshold multi-signature $\tau$; outputs $\bot$ if inputs are insufficient or inconsistent.
+
+\paragraph{$\mathsf{AVer}(\mathsf{avk},\, m,\, \tau,\, W) \rightarrow b \in \{0,1\}$.}
+% \[
+%   \mathsf{AVer}(\mathsf{avk},\, m,\, \tau,\, W) \rightarrow b \in \{0,1\}
+% \]
+Given a message $m$, an aggregate key $\mathsf{avk}$, an aggregate signature $\tau$, and the total stake $W=\sum_i w_i$, deterministically accepts ($b=1$) iff $\tau$ is a valid threshold multi-signature on $m$ under $\mathsf{avk}$ and $W$.
+
+% \medskip
+% \noindent\emph{Convention.} We use $\Sigma$ for the space of local proofs and $\mathcal{T}$ for the space of aggregate certificates; $\bot$ denotes failure/ineligibility. The concrete acceptance threshold (e.g., “$k$ of $m$ lottery wins’’ induced by $\alpha$ and liveness choices) is part of the scheme’s parameterization but not an explicit input to the syntax.
+\subsubsection{Correctness}
+
+
+
+\paragraph{Aggregate-key correctness.}
+For any $(\mathbf{vk},\mathbf{w}) \in \{ \}$,
+\[
+  \mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})
+  \quad\Longrightarrow\quad
+  \Pr\big[\mathsf{ACheck}(\mathsf{avk},\mathbf{vk},\mathbf{w})=1\big]
+  = 1 - \mathsf{negl}(\lambda).
+\]
+
+//todo: define negl
+
+\paragraph{Local-signature correctness.}
+For any honest key pair $(sk,vk)$ with stake $w$, any $j\in\{1,\dots,\mu\}$ and message $m$, if
+$\pi=(j,\sigma,vk,w)\leftarrow \mathsf{Sig}(vk,w,sk,j,m)\neq\bot$, then
+\[
+  e(\sigma,g_2)=e(H(m),vk)
+\]
+except with negligible probability. (Equivalently, $\sigma$ passes BLS verification.)
+
+% \paragraph{Local-signature availability (lottery coverage).}
+% For any honest signer with stake $w>0$ and fixed $m$, let
+% $S=\{j\in\{1,\dots,\mu\}:\mathsf{Sig}(vk,w,sk,j,m)\neq\bot\}$.
+% The distribution of $S$ matches the target eligibility rate $\varphi(w)$; in particular, the parameter choice ensures $\Pr[S=\emptyset]$ is negligible whenever a certificate is expected from the honest stake.
+
+\paragraph{Aggregate-signature correctness (completeness and acceptance).}
+Consider an execution where the set of honest users and their stakes are fixed, and let $E(m)$ denote the set of all (index, user) pairs that are \emph{eligible} on topic $m.\textsf{topic}$ (eligibility depends on $(\sigma,j,m.\textsf{topic})$ through $Eval$). Let the adversary choose a multiset of local proofs $\{\pi_i\}$ that includes, for at least one collection of indices $J\subseteq\{1,\dots,t\}$, \emph{all} local proofs of honest users for indices in $J$ (completeness for one consistent index set), with pairwise-distinct indices. If $\tau\leftarrow\mathsf{ASig}(\mathbf{vk},\mathbf{w},m,\{\pi_i\})$ is produced, then
+\[
+  \mathsf{AVer}(\mathsf{avk},m,\tau,W)=1
+\]
+except with negligible probability. Intuitively, whenever the aggregator includes a complete set of honest eligible local proofs for some consistent set of lottery indices, the resulting aggregate is accepted.
+
+\subsection{Security}
+\paragraph{Stake-based unforgeability $\alpha$-\textsf{UF-CMA}.}
+In the unforgeability experiment, the challenger runs $\mathsf{Setup}$, generates honest keys $(sk_i,vk_i)$, fixes $\mathbf{w}$, computes $\mathsf{avk}$, and gives $(\mathsf{pp},\mathbf{vk},\mathbf{w},\mathsf{avk})$ to the adversary $\mathcal{A}$. The adversary can:
+\begin{itemize}
+  \item query \emph{signing oracles} for any honest user $i$, any $j$, and any message $m$, receiving $\mathsf{Sig}(vk_i,w_i,sk_i,j,m)$;
+  \item \emph{corrupt} users to obtain $sk_i$ (and then act under those keys).
+\end{itemize}
+Let $C^\ast$ be the set of corrupted users. Let $H^\ast$ be the set of honest users that \emph{participated} on the forged topic (made at least one signing query for the challenge topic) under the forged aggregate key. The experiment \emph{charges} only successful eligibility (i.e., $\mathsf{Sig}\neq\bot$) and enforces the stake bound
+\[
+  \sum_{i\in C^\ast \cup H^\ast} w_i \;\le\; \alpha\, W .
+\]
+Finally, $\mathcal{A}$ outputs $(\mathbf{vk}^\ast,\mathsf{avk}^\ast,m^\ast,\tau^\ast)$; it wins if
+\[
+  \mathsf{ACheck}(\mathsf{avk}^\ast,\mathbf{vk}^\ast,\mathbf{w})=1,\quad
+  \mathsf{AVer}(\mathsf{avk}^\ast,m^\ast,\tau^\ast,W)=1,
+\]
+and $\tau^\ast$ is \emph{fresh}, i.e., it cannot be obtained by aggregating local proofs returned (or derivable) from oracle responses. An STMS is $\alpha$-\textsf{UF-CMA} secure if every PPT adversary wins with only negligible probability.
+
+\paragraph{Strengthened unforgeability $\alpha$-\textsf{UF-CMA-S}.}
+As above, but the adversary may first register arbitrary public keys (and corresponding stake placement) before $\mathsf{AKey}$ is run (key-substitution/registration stage). The rest of the game is identical. Security requires negligible winning probability for all PPT adversaries.
+
+\medskip
+\noindent\emph{Notes on the model.}
+\begin{itemize}
+  \item Eligibility depends on the topic but not the body. This prevents grinding by changing $\textsf{body}$ while preserving eligibility.
+  \item We adopt the “do not charge unsuccessful attempts’’ rule: an ineligible honest user (output $\bot$) is \emph{not} counted toward the adversarial stake budget; this mirrors the bridge paper’s UF-CMA variant that balances probing versus corruption.
+  \item Completeness in aggregate correctness is enforced against one consistent set of indices; pairwise-distinct indices in $\mathsf{ASig}$ prevent double-counting a lottery win.
+\end{itemize}
+
+
+\subsection{Instantiation}
+
+We write the Mithril scheme as
+\[
+  \Pi_{\mathsf{Mithril}}
+  =
+  (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck}, \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}).
+\]
+
+\begin{itemize}
+
+  \item $(\mathsf{pp}) \leftarrow \mathsf{Setup}(1^\lambda)$:\\
+        run $\Pi_{\mathsf{BLS}}.\mathsf{Setup}(1^\lambda)$ to obtain $(q,G_1,G_2,G_T,g_1,g_2,e,H)$
+        
+        fix a dense mapping / eligibility function
+        \[
+        Eval : ( msg, index, \sigma) \mapsto \{0,1\}^\lambda,
+        \]
+        % \[
+        %   Eval : G_1 \times \{1,\dots,\mu\} \times \{0,1\}^* \to \{0,1\}^\lambda,
+        % \]
+        a weighting function
+        \[
+          \varphi : \mathbb{N} \to [0,1],
+        \]
+        e.g. $\varphi(w) = 1-(1-f)^w$.
+
+        Index range
+        \[
+          \mu \in \mathbb{N}, 
+        \]
+
+        a quorum or lottery parameter
+        \[
+          k \in \{1,\dots,\mu\}.
+        \]
+        Output
+        \[
+          \mathsf{pp}=(q,G_1,G_2,G_T,g_1,g_2,e,H,Eval,\varphi,\mu,k).
+        \]
+
+  \item $(sk,vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:\\
+        run $\Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp})$ 
+        \[
+          (sk,vk) \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp})
+        \]
+        Output $(sk,vk)$.
+
+  \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$:\\
+        given
+        \[
+          \mathbf{vk}=(vk_1,\dots,vk_N),
+        \]
+        \[
+          \mathbf{w}=(w_1,\dots,w_N),
+        \]
+        set
+        \[
+          \mathsf{avk} \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+
+  \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk},\mathbf{vk},\mathbf{w})$, where $b\in\{0,1\}$:\\
+        compute
+        \[
+          avk' \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+        output b=1 iff avk=avk'. 
+
+  \item $\pi \leftarrow \mathsf{Sig}(\mathsf{pp}, vk, w, sk, j, m)$:\\
+        compute the BLS signature
+        \[
+          \sigma \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp}, sk, m),
+        \]
+        compute the eligibility value
+        \[
+          ev \leftarrow Eval(\sigma, j, m),
+        \]
+        and check the threshold
+        % \[
+        %   ev \;<\; \bigl\lfloor \varphi(w)\cdot 2^\lambda \bigr\rfloor.
+        % \]
+        \[
+          ev \;<\; \bigl\lfloor \varphi(w) \cdot 2^\lambda \bigr\rfloor.
+        \]
+        If true, output
+        \[
+          \pi=(j, \sigma, vk, w).
+        \]
+        Otherwise output $\bot$.
+
+
+
+
+          \item $\tau \leftarrow \mathsf{ASig}(\mathsf{pp}, m, \{\pi_i\}_{i=1}^{t})$:\\
+        parse each
+        \[
+          \pi_i=(j_i,\sigma_i,vk_i,w_i),
+        \]
+        with pairwise distinct
+        \[
+          j_i \in \{1,\dots,\mu\}.
+        \]
+        Set
+        \[
+          \sigma^\star \;=\; \prod_{i=1}^{t} \sigma_i \;\in\; G_1,
+        \]
+        \[
+          vk^\star \;=\; \prod_{i=1}^{t} vk_i \;\in\; G_2.
+        \]
+        Derive a batching seed
+        \[
+          e_\sigma \;\leftarrow\; H\!\bigl(\sigma_1 \,\|\, \cdots \,\|\, \sigma_t \,\bigr),
+        \]
+        and coefficients for $i=1,\dots,t$
+        \[
+          \rho_i \;\leftarrow\; \mathsf{H_\lambda}(e_\sigma \,\|\, i) \in \mathbb{Z}_q^\ast.
+        \]
+        Compute the batch aggregates
+        \[
+          \mu \;=\; \prod_{i=1}^{t} \sigma_i^{\rho_i} \;\in\; G_1,
+        \]
+        \[
+          ivk \;=\; \prod_{i=1}^{t} vk_i^{\rho_i} \;\in\; G_2.
+        \]
+        Output
+        \[
+          \tau \;=\; (\,\sigma^\star,\, vk^\star,\, \mu,\, ivk,\, e_\sigma).
+        \]
+
+  \item $b \leftarrow \mathsf{AVer}(\mathsf{pp}, \mathsf{avk}, m, \tau)$, where $b\in\{0,1\}$:\\
+        parse
+        \[
+          \tau=(\sigma^\star, vk^\star, \mu, ivk, e_\sigma).
+        \]
+        Check that the indices are pairwise distinct.
+        Compute
+        \[
+          h \leftarrow H(m).
+        \]
+        Verify the equation
+        \[
+          e(\sigma^\star, g_2) \;=\; e(h, vk^\star).
+        \]
+        Recompute the batching coefficients for $i=1,\dots,t$
+        \[
+          \rho_i \;\leftarrow\; \mathsf{H}(e_\sigma \,\|\, i) \in \mathbb{Z}_q^\ast,
+        \]
+        and the corresponding aggregated public key
+        \[
+          ivk' \;=\; \prod_{i=1}^{t} vk_i^{\rho_i} \;\in\; G_2.
+        \]
+        Check consistency of the submitted aggregated key
+        \[
+          ivk' \;=\; ivk.
+        \]
+        Verify the batched equation
+        \[
+          e(\mu, g_2) \;=\; e(h, ivk).
+        \]
+        Output
+        \[
+          b \;=\; 1 \text{ iff all checks above hold.}
+        \]
+\end{itemize}
+
+
+
+% \section{}
+% We write the Mithril scheme as
+% \[
+%   \Pi_{\mathsf{Mithril}}
+%   =
+%   (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck},
+%    \mathsf{Sig}, \mathsf{Ver}, \mathsf{ASig}, \mathsf{AVer}).
+% \]
+
+% We fix the following global parameters:
+% \begin{itemize}
+%   \item a security parameter $\lambda \in \mathbb{N}$;
+%   \item a maximum number of participants $N \in \mathbb{N}$;
+%   \item a stake vector
+%         $\mathbf{w} = (w_1,\dots,w_N) \in \mathbb{N}^N$
+%         with total stake $W := \sum_{i=1}^N w_i$;
+%   \item an adversarial stake bound $\alpha \in (0,1/2)$.
+% \end{itemize}
+
+% \begin{itemize}
+
+%   \item $(\mathsf{pp}) \leftarrow \mathsf{Setup}(1^\lambda)$: \\[0.2em]
+%         Run $\Pi_{\mathsf{BLS}}.\mathsf{Setup}(1^\lambda)$ to obtain
+%         \[
+%           (q, G_1, G_2, G_T, g_1, g_2, e, H_{\mathsf{G}_1}),
+%         \]
+%         where $G_1,G_2,G_T$ are cyclic groups of order $q$,
+%         $g_1 \in G_1$, $g_2 \in G_2$, $e : G_1 \times G_2 \to G_T$
+%         is a bilinear pairing, and
+%         $H_{\mathsf{G}_1} : \{0,1\}^* \to G_1$ is a hash-to-curve
+%         function.
+
+%         Fix a dense eligibility mapping
+%         \[
+%           Eval : G_1 \times \{1,\dots,\mu\} \times \{0,1\}^*
+%                  \to \{0,1\}^\lambda,
+%         \]
+%         which we interpret as outputting a $\lambda$-bit string
+%         (to be viewed as an integer in $\{0,\dots,2^\lambda-1\}$),
+%         a weighting function
+%         \[
+%           \varphi : \mathbb{N} \to [0,1],
+%         \]
+%         e.g.\ $\varphi(w) = 1-(1-f)^w$ for some base rate $f$,
+
+%         an index range
+%         \[
+%           \mu \in \mathbb{N},
+%         \]
+%         and a quorum / lottery parameter
+%         \[
+%           k \in \{1,\dots,\mu\}.
+%         \]
+
+%         Finally, fix an additional hash
+%         \[
+%           H_\lambda : \{0,1\}^* \to \mathbb{Z}_q^\ast
+%         \]
+%         for deriving batching coefficients.
+
+%         Output
+%         \[
+%           \mathsf{pp} =
+%           (q,G_1,G_2,G_T,g_1,g_2,e,H_{\mathsf{G}_1},Eval,\varphi,\mu,k,H_\lambda).
+%         \]
+
+%   \item $(sk,vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$: \\[0.2em]
+%         Run $\Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp})$ to obtain
+%         \[
+%           sk \xleftarrow{\$} \mathbb{Z}_q, \qquad
+%           vk = g_2^{sk} \in G_2.
+%         \]
+%         Output $(sk,vk)$.
+
+%   \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$: \\[0.2em]
+%         Given a vector of verification keys
+%         \[
+%           \mathbf{vk} = (vk_1,\dots,vk_N),
+%         \]
+%         and a stake vector
+%         \[
+%           \mathbf{w} = (w_1,\dots,w_N),
+%         \]
+%         compute the aggregate verification key using the Mithril
+%         tree primitive:
+%         \[
+%           \mathsf{avk} \leftarrow
+%           \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+%         \]
+%         Output $\mathsf{avk}$.
+
+%   \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk},\mathbf{vk},\mathbf{w})$,
+%         where $b\in\{0,1\}$: \\[0.2em]
+%         Recompute
+%         \[
+%           avk' \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+%         \]
+%         Output $b = 1$ iff $avk' = \mathsf{avk}$, and $b = 0$ otherwise.
+
+%   \item $\pi \leftarrow \mathsf{Sig}(\mathsf{pp}, vk, w, sk, j, m)$: \\[0.2em]
+%         Here $vk \in G_2$ is the signer's verification key,
+%         $w \in \mathbb{N}$ is its local stake, $sk$ is its secret key,
+%         $j \in \{1,\dots,\mu\}$ is a lottery index, and
+%         $m \in \{0,1\}^*$ is the message.
+
+%         Compute the BLS signature
+%         \[
+%           \sigma \leftarrow
+%           \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp}, sk, m)
+%           = H_{\mathsf{G}_1}(m)^{sk} \in G_1,
+%         \]
+%         compute the eligibility value
+%         \[
+%           ev \leftarrow Eval(\sigma, j, m) \in \{0,1\}^\lambda,
+%         \]
+%         and interpret $ev$ as an integer in $\{0,\dots,2^\lambda-1\}$.
+
+%         Check the threshold
+%         \[
+%           ev \;<\; \bigl\lfloor \varphi(w) \cdot 2^\lambda \bigr\rfloor.
+%         \]
+%         If the inequality holds, output the local proof
+%         \[
+%           \pi = (j, \sigma, vk, w).
+%         \]
+%         Otherwise output $\bot$.
+
+%   \item $b \leftarrow \mathsf{Ver}(\mathsf{pp}, vk, w, j, m, \pi)$,
+%         where $b \in \{0,1\}$: \\[0.2em]
+%         Parse
+%         \[
+%           \pi = (j', \sigma, vk', w').
+%         \]
+%         If $j' \neq j$ or $vk' \neq vk$ or $w' \neq w$, output $b=0$.
+%         Otherwise, compute
+%         \[
+%           h \leftarrow H_{\mathsf{G}_1}(m)
+%         \]
+%         and verify the BLS signature
+%         \[
+%           e(\sigma, g_2) \stackrel{?}{=} e(h, vk).
+%         \]
+%         If this fails, output $b=0$.
+
+%         Optionally recompute
+%         \[
+%           ev \leftarrow Eval(\sigma, j, m)
+%         \]
+%         and check the same threshold condition as in
+%         $\mathsf{Sig}$; if it fails, output $b=0$.
+%         Otherwise output $b=1$.
+
+%   \item $\tau \leftarrow \mathsf{ASig}(\mathsf{pp}, m, \{\pi_i\}_{i=1}^{t})$: \\[0.2em]
+%         Given a message $m \in \{0,1\}^*$ and a multiset of local
+%         proofs
+%         \[
+%           \{\pi_i\}_{i=1}^{t},
+%         \]
+%         parse each
+%         \[
+%           \pi_i = (j_i,\sigma_i,vk_i,w_i),
+%         \]
+%         and require that the indices $j_i$ are pairwise distinct:
+%         if $j_i = j_{i'}$ for some $i \neq i'$, output $\bot$.
+
+%         For each $i=1,\dots,t$, optionally verify the local proof by
+%         checking
+%         \[
+%           \mathsf{Ver}(\mathsf{pp}, vk_i, w_i, j_i, m, \pi_i) = 1;
+%         \]
+%         if any check fails, output $\bot$.
+
+%         Set the (unweighted) aggregate signature and key
+%         \[
+%           \sigma^\star \;=\; \prod_{i=1}^{t} \sigma_i \;\in\; G_1,
+%           \qquad
+%           vk^\star \;=\; \prod_{i=1}^{t} vk_i \;\in\; G_2.
+%         \]
+
+%         Derive a batching seed
+%         \[
+%           e_\sigma \;\leftarrow\;
+%           H(m \,\|\, \sigma_1 \,\|\, \cdots \,\|\, \sigma_t),
+%         \]
+%         and coefficients for $i=1,\dots,t$
+%         \[
+%           \rho_i \;\leftarrow\;
+%           H_\lambda(e_\sigma \,\|\, i) \in \mathbb{Z}_q^\ast.
+%         \]
+
+%         Compute the batched aggregates
+%         \[
+%           \mu \;=\; \prod_{i=1}^{t} \sigma_i^{\rho_i} \;\in\; G_1,
+%           \qquad
+%           ivk \;=\; \prod_{i=1}^{t} vk_i^{\rho_i} \;\in\; G_2.
+%         \]
+
+%         Output
+%         \[
+%           \tau \;=\;
+%           (\,\sigma^\star,\, vk^\star,\, \mu,\, ivk,\, e_\sigma\,).
+%         \]
+
+%   \item $b \leftarrow \mathsf{AVer}(\mathsf{pp}, \mathsf{avk}, m, \tau)$,
+%         where $b\in\{0,1\}$: \\[0.2em]
+%         Parse
+%         \[
+%           \tau = (\sigma^\star, vk^\star, \mu, ivk, e_\sigma).
+%         \]
+
+%         Compute
+%         \[
+%           h \leftarrow H_{\mathsf{G}_1}(m).
+%         \]
+
+%         First, verify the (unbatched) aggregate signature equation
+%         \[
+%           e(\sigma^\star, g_2) \stackrel{?}{=} e(h, vk^\star).
+%         \]
+%         If this fails, output $b=0$.
+
+%         Recompute the batching coefficients (using public data)
+%         for $i=1,\dots,t$
+%         \[
+%           \rho_i \;\leftarrow\; H_\lambda(e_\sigma \,\|\, i)
+%           \in \mathbb{Z}_q^\ast,
+%         \]
+%         and the corresponding aggregated public key
+%         \[
+%           ivk' \;=\; \prod_{i=1}^{t} vk_i^{\rho_i} \;\in\; G_2.
+%         \]
+%         Check consistency of the submitted aggregated key
+%         \[
+%           ivk' \stackrel{?}{=} ivk.
+%         \]
+%         If this fails, output $b=0$.
+
+%         Finally, verify the batched pairing equation
+%         \[
+%           e(\mu, g_2) \stackrel{?}{=} e(h, ivk).
+%         \]
+%         If this fails, output $b=0$.
+
+%         Otherwise output $b = 1$.
+% \end{itemize}
+
+
+
+
+
+
+\end{document}

@@ -16,8 +16,7 @@
 }
 
 
-
-\title{25.9.9 Snarkifying Mithiril}
+\title{25.10.3 Snarkifying Mithiril}
 
 \author{Wuyunsiqin \quad \quad Bingsheng Zhang \\ 
 Zhejiang University, CHN \\
@@ -35,6 +34,34 @@ Zhejiang University, CHN \\
 
 \section{Snarkifying Mithril(Theoretical)}
 
+\subsection{SNARK}
+A SNARK for a relation $\mathcal{R}$ is a triple of PPT algorithms $\Pi = (\mathsf{Setup}, \mathsf{Prove}, \mathsf{Verify})$ defined as follows:
+
+
+\begin{itemize}
+    \item $  \mathsf{srs} \leftarrow \mathsf{Setup}(1^\lambda)$:On input security parameter $\lambda$
+, it outputs a structured reference string $\mathsf{srs}$.   
+    \item $\pi \leftarrow \mathsf{Prove}(\mathsf{srs}, x, w)$: On input $\mathsf{srs}$, a statement $x$ and a witness $w$ such that $(x, w) \in \mathcal{R}$, output a proof $\pi$.
+    \item $0/1 \leftarrow\mathsf{Verify}(\mathsf{srs},x,\pi) $:On input $\mathsf{srs}$, a statement $x$, and a
+proof $\pi$, it outputs either 1 indicating accepting the statement or 0 for rejecting it.
+\end{itemize}
+
+\subsection{BLS}
+$\Pi_{BLS} = (Setup,Sign,Ver)$
+\begin{itemize}
+    \item $(sk,vk = g_1^{sk}) \leftarrow Setup() $
+    \item $\sigma \leftarrow Sign(sk,msg), \text{where  }\sigma = H(msg)^{sk}$
+    \item $1/0 \leftarrow Ver(vk,\sigma,msg)$, check $e(g_1, \sigma) = e(\mathsf{vk}, H(msg))$
+\end{itemize}
+
+\subsection{Merkle tree}
+
+$\Pi_{MT} = (Create,Check)$
+
+\begin{itemize}
+    \item $avk \leftarrow Create(\mathbf{VK})$
+    \item $1/0 \leftarrow Check(vk,avk,path)$
+\end{itemize}
 
 \subsection{SNARK-based Mithril}
 
@@ -56,7 +83,7 @@ Zhejiang University, CHN \\
 \paragraph{Mithril.Setup(\lambda)}
 \begin{align*}
 &(pp,m) \leftarrow \text{Setup}(1^\lambda)\\
-&\text{return } (pp,m) 
+&\text{return  (pp,m) }
 \end{align*}
 
 \paragraph{Mithril.KGen(pp)}
@@ -71,14 +98,15 @@ Zhejiang University, CHN \\
 &\textbf{WVK} \leftarrow \{(w_i, vk_i) : i \in [n]\} \\
 % &w \leftarrow \sum_{i \in [n]} w_i\\
 &avk \leftarrow MT.\mathrm{Create}(\textbf{WVK}) \\
-&\text{return } avk
+&\pi_1 \leftarrow \mathsf{SNARK.Prove}(pp, x = avk, w = (\textbf{vk}, \textbf{w}, \textbf{path})) \\
+&\quad (\mathcal{R} = \{(x = avk, w = (\textbf{VK}, \textbf{w}, \textbf{path}))\quad |\\ & \quad \ \ \forall i \in [m],\ MT.\mathrm{Check}(avk, (w_i, vk_i), path_i) = 1 \}) \\
+&\text{return } (avk,\pi_1)
 \end{align*}
 
 \paragraph{Mithril.ACheck(avk,\textbf{vk}, \textbf{w}, \textbf{path})}
 \begin{align*}
-&\pi_1 \leftarrow \mathsf{SNARK.Prove}(pp, x = avk, w = (\textbf{vk}, \textbf{w}, \textbf{path})) \\
-&\quad (\mathcal{R} = \{(x = avk, w = (\textbf{VK}, \textbf{w}, \textbf{path}))\quad |\\ & \quad \ \ \forall i \in [m],\ MT.\mathrm{Check}(avk, (w_i, vk_i), path_i) = 1 \}) \\
-&\text{return } \pi_1
+&b \leftarrow \mathsf{SNARK.Verify}(pp, x = avk, \pi_1)\\
+&\text{return b} 
 \end{align*}
 
 % \paragraph{Mithril.AvkCheck(avk, srs)}
@@ -95,43 +123,53 @@ Zhejiang University, CHN \\
 % &\text{return } \sigma
 % \end{align*}
 
-\paragraph{Mithril.Sig(vk, w,$\texttt{sk, j, m})$ (To Do)}
+\paragraph{Mithril.Sig(vk, w,$\texttt{sk, j, m})$}
 \begin{align*}
 &\text{let } \textit{topic} \leftarrow "0" \parallel avk \parallel m.\mathsf{topic}\\
 &\sigma_{topic} \leftarrow \mathrm{BLS.Sign}(sk,\ \textit{topic})\\
 &ev \leftarrow \mathrm{MSP.Eval}(\textit{topic},\ j,\ \sigma_{topic})\\
 &\mathbf{if}\ ev < \phi(w)\ \mathbf{then}\\
 &\qquad \sigma_{\mathsf{body}} \leftarrow \mathrm{BLS.Sign}(sk,\ "1" \parallel \textit{topic} \parallel m.\mathsf{body})\\
+&\qquad \sigma \leftarrow (\sigma_{topic},\sigma_{\mathsf{body}}, ev, j)\\
 &\qquad \textbf{return}\ \sigma \\
 &\mathbf{else}\ \textbf{return}\ \bot
 \end{align*}
 
 
-\paragraph{Mithril.ASig( vk, w, m, S=$\{(\sigma_j,vk_j) | j\  \in\  [k]\}$)}
+\paragraph{Mithril.ASig(avk, \textbf{vk}, \textbf{w}, m, S=$\{((\sigma_j^{\mathsf{topic}},\sigma_j^{\mathsf{body}},ev_j,j),vk_j) | j\  \in\  [k]\}$)}
 \begin{align*}
-&\boldsymbol{\sigma} \leftarrow [\{\sigma_j | j\  \in\  [k]\}] \\
-&e_{\sigma} \leftarrow H_p(\boldsymbol{\sigma}) \\
+&\text{let } \textit{topic} \leftarrow "0" \parallel avk \parallel m.\mathsf{topic}\\
+&\boldsymbol{\sigma}^{\mathsf{body}} \leftarrow [\{\sigma_j^{\mathsf{body}} | j\  \in\  [k]\}] \\
+&\boldsymbol{\sigma}^{\mathsf{topic}} \leftarrow [\{\sigma_j^{\mathsf{topic}} | j\  \in\  [k]\}] \\
+&\boldsymbol{ev} \leftarrow [\{ev_j | j\  \in\  [k]\}] \\
+&e_{\sigma} \leftarrow H_p(\boldsymbol{\sigma}^{\mathsf{body}}) \\
 &e_j \leftarrow H_\lambda(j, e_{\sigma}) \\
-&\mu \leftarrow \prod_j \sigma_j^{e_j} \\
-&\pi_2 \leftarrow SNARK.Prove(srs,x=(\mu, e_{\sigma}),w=(\boldsymbol{\sigma})) \\
-&\quad (R = \{x=(\mu, e_{\sigma},,w),w=(\boldsymbol{\sigma})\quad|\quad \\
-&\quad \ \ e_{\sigma} = H_p(\boldsymbol{\sigma}) \land e_j = H_\lambda(j, e_{\sigma}) \land \mu = \prod_j \sigma_j^{e_j} \})\\ 
-% &\quad \ \ \land BLS.Ver(avk,\mu,ivk)\}\\
-&\tau \leftarrow (\mu, e_{\sigma},\pi_2) \\
+&\mu \leftarrow \prod_j (\sigma_j^{\mathsf{body}})^{e_j} \\
+&ivk \leftarrow \prod_j vk_j^{e_j} \\
+&\pi_2 \leftarrow SNARK.Prove(pp,x=(\mu, e_{\sigma}),w=(\boldsymbol{\sigma}^{\mathsf{body}},\boldsymbol{\sigma}^{\mathsf{topic}},\boldsymbol{ev},\textbf{w})) \\
+&\quad (\mathcal{R} = \{x=(\mu, e_{\sigma}),w=(\boldsymbol{\sigma}^{\mathsf{body}},\boldsymbol{\sigma}^{\mathsf{topic}},\boldsymbol{ev},\textbf{w})\quad|\quad \\
+&\quad \ \ e_{\sigma} = H_p(\boldsymbol{\sigma}^{\mathsf{body}}) \land \forall j \in [k], e_j = H_\lambda(j, e_{\sigma}) \\
+&\quad \ \ \land \mu = \prod_j (\sigma_j^{\mathsf{body}})^{e_j} \land \mathrm{MSP.Eval}(\textit{topic}, j, \sigma_j^{\mathsf{topic}}) = ev_j \\
+&\quad \ \ \land ev_j < \phi(w_j) \})\\ 
+&\tau \leftarrow (\mu, e_{\sigma}, ivk, \pi_2) \\
 &\text{return } \tau 
 \end{align*}
 
-\paragraph{Mithril.AVer(avk, m, \tau , w)(To Do: Check \pi)}
+\paragraph{Mithril.AVer(avk, m, \tau , w)}
 \begin{align*}
 % &r_1 \leftarrow \mathsf{SNARK.Verify}(srs, x = (\mu, e_{\sigma}),\pi_2)\\
 % &r_2 \leftarrow \mathsf{BLS.Ver}(ivk,\mu,m) \\
 % &\textbf{return}\quad r_1 \land r_2
-&b \leftarrow \mathsf{BLS.Ver}(ivk,\mu,m) \\
-&\textbf{return}\quad b
+&(\mu, e_{\sigma}, ivk, \pi_2) \leftarrow \tau \\
+&b_1 \leftarrow \mathsf{BLS.Ver}(ivk,\mu,m) \\
+&b_2 \leftarrow \mathsf{SNARK.Verify}(pp, x = (\mu,e_\sigma), \pi_2)\\
+&\textbf{return}\quad b_1 \land b_2
 \end{align*}
 
-(Here, ivk = $\prod_j vk_j^{e_j}$)
+(Here, $ivk$ is explicitly part of $\tau$ and satisfies $ivk = \prod_j vk_j^{e_j}$.)
 
-(To Do: Check k)
+For correctness we require $k = |S|$ to exceed the stake threshold,
+e.g., $k \ge \lceil \phi(\textbf{w}) \rceil$, so that the aggregated certificate
+encodes a quorum of eligible signers.
 
 \end{document}
