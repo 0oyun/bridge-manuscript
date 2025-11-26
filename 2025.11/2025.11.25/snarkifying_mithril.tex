@@ -37,14 +37,37 @@ oyun@zju.edu.cn \quad bingsheng@zju.edu.cn}
 
 
 
-\section{Primitives}
+\section{Preliminaries}
+\subsection{Notations}
+
+There are some basic notation and conventions used throughout this work.
+
+\begin{itemize}
+  \item The security parameter is denoted by $\lambda \in \mathbb{N}$.
+  %  All probabilistic polynomial-time (PPT) algorithms and adversaries are assumed to run in time polynomial in $\lambda$. Whenever an algorithm takes $1^\lambda$ as input, this denotes the unary encoding of $\lambda$.
+
+  % \item For an integer $n \in \mathbb{N}$, we write $[n] := \{1,\dots,n\}$ for the index set of $n$ parties. If $\mathbf{x} = (x_1,\dots,x_n)$ is a vector indexed by $[n]$, we use boldface letters for vectors (for example, $\mathbf{vk}$ and $\mathbf{w}$) and plain letters for their components.
+
+  \item For any finite set $S$, we write $|S|$ for its cardinality. We use the notation
+        \[
+          x \xleftarrow{\$} S
+        \]
+        to indicate that $x$ is sampled uniformly at random from the finite set $S$.
+
+  % \item For an integer $q \ge 2$, we write $\mathbb{Z}_q$ for the ring of integers modulo~$q$ and $\mathbb{Z}_q^\ast$ for its multiplicative group of invertible elements.
+
+  % \item If $X$ denotes a random variable or a probabilistic experiment, we write $\Pr[X \in E]$ for the probability of an event $E$. When the underlying experiment is clear from the context, we abbreviate this to $\Pr[\cdot]$.
+
+  \item A function $\mathsf{negl} : \mathbb{N} \to \mathbb{R}_{\ge 0}$ is called \emph{negligible} if for every polynomial $p(\cdot)$ there exists $N \in \mathbb{N}$ such that for all $\lambda \ge N$ it holds that $\mathsf{negl}(\lambda) < 1/p(\lambda)$. We write $\mathsf{negl}(\lambda)$ to denote an unspecified negligible function in the security parameter~$\lambda$.
+\end{itemize}
+
 
 \subsection{BLS Signature Scheme}
 
 Let $\lambda$ be the security parameter. We assume a bilinear group
-generation algorithm which on input $1^\lambda$ outputs
+generation algorithm which, on input $1^\lambda$, outputs
 \[
-(q, G_1, G_2, G_T, g_1, g_2, e),
+  (q, G_1, G_2, G_T, g_1, g_2, e),
 \]
 where $G_1,G_2,G_T$ are cyclic groups of prime order $q$, $g_1\in G_1$,
 $g_2\in G_2$ are generators, and
@@ -57,7 +80,7 @@ We write the BLS signature scheme as
 \]
 
 \begin{itemize}
-  \item $pp \leftarrow\mathsf{Setup}(1^\lambda)$:  
+  \item $pp \leftarrow \mathsf{Setup}(1^\lambda)$:  
         run the group generator to obtain
         $(q, G_1, G_2, G_T, g_1, g_2, e)$ and fix $H$.
         Output public parameters
@@ -65,19 +88,21 @@ We write the BLS signature scheme as
           \mathsf{pp} = (q, G_1, G_2, G_T, g_1, g_2, e, H).
         \]
 
-  \item $(sk,vk) \leftarrow\mathsf{KGen}(\mathsf{pp})$:  
-        sample $sk \xleftarrow{\$} \mathbb{Z}_q$ and set
+  \item $(sk,vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:  
+        sample a secret key $sk \xleftarrow{\$} \mathbb{Z}_q$, where
+        $\mathbb{Z}_q$ denotes the integers modulo $q$, and set
         \[
           vk = g_2^{sk} \in G_2.
         \]
         Output the key pair $(sk, vk)$.
 
   \item $\sigma \leftarrow \mathsf{Sign}(\mathsf{pp}, sk, msg)$:  
-        compute $h \leftarrow H(msg) \in G_1$ and set
+        on input a message $msg \in \{0,1\}^*$, compute
+        $h \leftarrow H(msg) \in G_1$ and set
         \[
           \sigma = h^{sk} \in G_1.
         \]
-        Output $\sigma$.
+        Output the signature $\sigma$.
 
   \item $b \leftarrow \mathsf{Ver}(\mathsf{pp}, vk, msg, \sigma)$, where $b \in \{0,1\}$:  
         compute $h \leftarrow H(msg)$ and output
@@ -89,123 +114,182 @@ We write the BLS signature scheme as
 \end{itemize}
 
 \subsection{Merkle Tree}
+
 Let $H_{\mathsf{MT}}  : \{0,1\}^* \to \{0,1\}^\lambda$ be a collision-resistant hash function.
 
 We denote the Merkle tree primitive by
 \[
-\Pi_{\mathsf{MT}} = (\mathsf{Create}, \mathsf{Check}).
+  \Pi_{\mathsf{MT}} = (\mathsf{Create}, \mathsf{Check}).
 \]
 
 \begin{itemize}
 
-    \item $\mathsf{avk} \leftarrow \mathsf{Create}(\mathbf{vk}, \mathbf{w})$ : 
-    on input a vector of verification keys $\mathbf{vk} = (vk_1,\dots,vk_N)$ and a matching stake vector $\mathbf{w}=(w_1,\dots,w_N)$, set leaves $\ell_i := H_{\mathsf{MT}} (vk_i , w_i)$ and output the Merkle root $\mathsf{avk}$.
-    
-    \item $b \leftarrow \mathsf{Check}(\mathsf{avk}, vk, w, path)$: on input a root $\mathsf{avk}$, a pair $(vk,w)$, and an authentication path $path$, recompute the root from $\ell := H_{\mathsf{MT}} (vk , w)$ and $path$. Output (b = 1) iff the recomputed root equals $\mathsf{avk}$, and (b = 0) otherwise.
+  \item $\mathsf{avk} \leftarrow \mathsf{Create}(\mathbf{vk}, \mathbf{w})$:
+        on input a vector of verification keys
+        $\mathbf{vk} = (vk_1,\dots,vk_N)$ and a matching stake vector
+        $\mathbf{w}=(w_1,\dots,w_N)$, where $N \in \mathbb{N}$ denotes
+        the number of parties, set leaves
+        $\ell_i := H_{\mathsf{MT}}(vk_i , w_i)$ and output the Merkle root
+        $\mathsf{avk}$, which we also call an aggregate verification key.
+
+  \item $b \leftarrow \mathsf{Check}(\mathsf{avk}, vk, w, path)$, where $b \in \{0,1\}$:
+        on input a root $\mathsf{avk}$, a pair $(vk,w)$, and an authentication
+        path $path$, recompute the root from the leaf
+        $\ell := H_{\mathsf{MT}}(vk , w)$ and $path$. Output $b = 1$ iff the
+        recomputed root equals $\mathsf{avk}$, and $b = 0$ otherwise.
 
 \end{itemize}
 
 
 \section{Stake-based threshold multi-signature}
 
+
 \subsection{Syntax}
 
-We model Mithril as an $\alpha$-STMS whose acceptance is determined on a \emph{stake} basis via a ``$t$ wins in $n$ lotteries'' parametrization. 
-% Messages are tuples
-% $m=(m.\textsf{topic},\,m.\textsf{body})$; eligibility depends on $m.\textsf{topic}$ (and a lottery index) but not on $m.\textsf{body}$.
+We consider a stake-based threshold multi-signature (STMS) scheme whose acceptance is determined on a per-stake basis via a ``$t$ wins in $n$ lotteries'' parametrization, for some integers $t,n \in \mathbb{N}$.
+
+
 
 \[
   \Pi_{\mathsf{STMS}}
   =
   (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck},
-   \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}) .
+   \mathsf{Sig}, \mathsf{Ver}, \mathsf{ASig}, \mathsf{AVer}) .
 \]
 
-\paragraph{$\mathsf{Setup}(1^\lambda) \rightarrow (\mathsf{pp},\, n)$.}
-% \[
-%   \mathsf{Setup}(1^\lambda) \rightarrow (\mathsf{pp},\, m)
-% \]
-On input a security parameter, outputs system parameters $\mathsf{pp}$ and a lottery parameter $n\in\mathbb{N}$ (the number of lotteries). 
-% These are implicit inputs to all other algorithms.
+\begin{itemize}
+  \item $\mathsf{pp} \leftarrow \mathsf{Setup}(1^\lambda)$:  
+        on input a security parameter $1^\lambda$, outputs public system parameters $\mathsf{pp}$.  
+        These parameters are implicit inputs to all other algorithms.
 
-\paragraph{$\mathsf{KGen}(\mathsf{pp}) \rightarrow (sk,\, vk)$.}
-% \[
-%   \mathsf{KGen}(\mathsf{pp}) \rightarrow (sk,\, vk)
-% \]
-Generates a signing/verification key pair.
+  \item $(sk,\, vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:  
+        on input the public parameters $\mathsf{pp}$, generates a signing/verification key pair $(sk,vk)$ for a single party.
 
-\paragraph{$\mathsf{AKey}(\mathbf{vk},\, \mathbf{w}) \rightarrow \mathsf{avk}$.}
-% \[
-%   \mathsf{AKey}(\mathbf{vk},\, \mathbf{w}) \rightarrow \mathsf{avk}
-% \]
-Given a list of verification keys $\mathbf{vk} :=(vk_1,\ldots,vk_N)$ and a matching stake vector $\mathbf{w} :=(w_1,\ldots,w_N)$, deterministically produces an aggregate verification key $\mathsf{avk}$.
-//todo: define N
-\paragraph{$\mathsf{ACheck}(\mathsf{avk},\, \mathbf{vk},\, \mathbf{w}) \rightarrow b \in \{0,1\}$.}
-% \[
-%   \mathsf{ACheck}(\mathsf{avk},\, \mathbf{vk},\, \mathbf{w}) \rightarrow b \in \{0,1\}
-% \]
-Deterministically checks whether $\mathsf{avk}$ is the correct aggregate key for $(\mathbf{vk},\mathbf{w})$.
+  \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\, \mathbf{w})$:  
+        given a list of verification keys $\mathbf{vk} := (vk_1,\ldots,vk_N)$ and a matching stake vector $\mathbf{w} := (w_1,\ldots,w_N)$,  
+        where $N \in \mathbb{N}$ denotes the number of parties, deterministically produces an aggregate verification key $\mathsf{avk}$.
 
-\paragraph{$\mathsf{Sig}(vk,\, w,\, sk,\, j,\, m) \rightarrow \sigma \;$.}
-% \[
-%   \mathsf{Sig}(vk,\, w,\, sk,\, j,\, m) \rightarrow \sigma \;
-%   % \in\; \Sigma \cup \{\bot\}
-% \]
-Attempts to produce a local proof $\sigma$ for message $n$ and lottery index $j\in\{1,\ldots,n\}$ on behalf of a user with key pair $(sk,vk)$ and stake $w$. It outputs $\bot$ if the user is ineligible for $(m,j)$ under stake $w$.
+  \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk},\, \mathbf{vk},\, \mathbf{w})$, where $b \in \{0,1\}$:  
+        deterministically checks whether $\mathsf{avk}$ is a valid aggregate verification key for $(\mathbf{vk},\mathbf{w})$,  
+        outputting $b = 1$ if it accepts and $b = 0$ otherwise.
 
-\paragraph{$\mathsf{ASig}(\mathbf{vk},\, \mathbf{w},\, m,\, \{(vk_i,\sigma_i)\}_{i=1}^{t})
-  \rightarrow \tau $.}
-% \[
-%   \mathsf{ASig}(\mathbf{vk},\, \mathbf{w},\, m,\, \{(vk_i,\sigma_i)\}_{i=1}^{t})
-%   \rightarrow \tau 
-%   % \;\in\; \mathcal{T} \cup \{\bot\}
-% \]
-Given $(\mathbf{vk},\mathbf{w})$, a message $m$, and a multiset of signer/signature pairs with pairwise-distinct lottery indices, aggregates them into a threshold multi-signature $\tau$; outputs $\bot$ if inputs are insufficient or inconsistent.
+  \item $\sigma \leftarrow \mathsf{Sig}(vk,\, w,\, sk,\, j,\, m)$:  
+        attempts to produce a signature $\sigma$ for message $m$ and lottery index $j \in [n]$  
+        under verification key $vk$, secret key $sk$, and stake $w$.  
+        It outputs $\bot$ if the user is ineligible for $(m,j)$ under stake $w$.
 
-\paragraph{$\mathsf{AVer}(\mathsf{avk},\, m,\, \tau,\, W) \rightarrow b \in \{0,1\}$.}
-% \[
-%   \mathsf{AVer}(\mathsf{avk},\, m,\, \tau,\, W) \rightarrow b \in \{0,1\}
-% \]
-Given a message $m$, an aggregate key $\mathsf{avk}$, an aggregate signature $\tau$, and the total stake $W=\sum_i w_i$, deterministically accepts ($b=1$) iff $\tau$ is a valid threshold multi-signature on $m$ under $\mathsf{avk}$ and $W$.
+  \item $b \leftarrow \mathsf{Ver}(vk,\, w,\, j,\, m,\, \sigma)$, where $b \in \{0,1\}$:  
+        given a verification key $vk$, a stake value $w$, a lottery index $j$, a message $m$, and a signature $\sigma$,  
+        deterministically checks whether $\sigma$ is a valid signature for $(m,j)$ under $(vk,w)$  
+        and outputs $b = 1$ if it accepts and $b = 0$ otherwise.
 
-% \medskip
-% \noindent\emph{Convention.} We use $\Sigma$ for the space of local proofs and $\mathcal{T}$ for the space of aggregate certificates; $\bot$ denotes failure/ineligibility. The concrete acceptance threshold (e.g., “$k$ of $m$ lottery wins’’ induced by $\alpha$ and liveness choices) is part of the scheme’s parameterization but not an explicit input to the syntax.
+  \item $\tau \leftarrow \mathsf{ASig}(\mathbf{vk},\, \mathbf{w},\, m,\, \{(vk_i,\sigma_i)\}_{i=1}^{t})$:  
+        given $(\mathbf{vk},\mathbf{w})$, a message $m$, and a multiset $\{(vk_i,\sigma_i)\}_{i=1}^{t}$ of signatures,  
+        attempts to produce an aggregate signature $\tau$; it outputs $\bot$ if the provided inputs are insufficient or inconsistent.
+
+  \item $b \leftarrow \mathsf{AVer}(\mathsf{avk},\, m,\, \tau,\, T)$, where $b \in \{0,1\}$:  
+        given a message $m$, an aggregate verification key $\mathsf{avk}$, an aggregate signature $\tau$,  
+        and a stake threshold parameter $T$, outputs $b = 1$ if $\tau$ is accepted as a valid aggregate  
+        (stake-based threshold) multi-signature on $m$ under $\mathsf{avk}$ and threshold $T$, and $b = 0$ otherwise.
+
+\end{itemize}
+
+
+
 \subsubsection{Correctness}
 
-
-
-\paragraph{Aggregate-key correctness.}
-For any $(\mathbf{vk},\mathbf{w}) \in \{ \}$,
+Let 
 \[
-  \mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})
-  \quad\Longrightarrow\quad
-  \Pr\big[\mathsf{ACheck}(\mathsf{avk},\mathbf{vk},\mathbf{w})=1\big]
-  = 1 - \mathsf{negl}(\lambda).
+  \Pi_{\mathsf{STMS}}
+  =
+  (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck},
+   \mathsf{Sig}, \mathsf{Ver}, \mathsf{ASig}, \mathsf{AVer})
 \]
+be a stake-based threshold multi-signature (STMS) scheme as specified above.  
+Let $\mathcal{M}$ denote the message space.
 
-//todo: define negl
+\paragraph{Definition (Correctness).}
+We say that $\Pi_{\mathsf{STMS}}$ is \emph{correct} if for every security parameter $\lambda \in \mathbb{N}$,
+every number of parties $N \in \mathbb{N}$, every vector of verification keys
+$\mathbf{vk} = (vk_1,\dots,vk_N)$ generated honestly by $\mathsf{KGen}$, every stake vector
+$\mathbf{w} = (w_1,\dots,w_N)$, every message $m \in \mathcal{M}$, every stake threshold parameter
+$T$, and every lottery index $j$ in the relevant index set, the following properties hold except with
+negligible probability in $\lambda$ over the randomness of all algorithms involved.
 
-\paragraph{Local-signature correctness.}
-For any honest key pair $(sk,vk)$ with stake $w$, any $j\in\{1,\dots,\mu\}$ and message $m$, if
-$\pi=(j,\sigma,vk,w)\leftarrow \mathsf{Sig}(vk,w,sk,j,m)\neq\bot$, then
-\[
-  e(\sigma,g_2)=e(H(m),vk)
-\]
-except with negligible probability. (Equivalently, $\sigma$ passes BLS verification.)
 
-% \paragraph{Local-signature availability (lottery coverage).}
-% For any honest signer with stake $w>0$ and fixed $m$, let
-% $S=\{j\in\{1,\dots,\mu\}:\mathsf{Sig}(vk,w,sk,j,m)\neq\bot\}$.
-% The distribution of $S$ matches the target eligibility rate $\varphi(w)$; in particular, the parameter choice ensures $\Pr[S=\emptyset]$ is negligible whenever a certificate is expected from the honest stake.
+\begin{itemize}
+  \item \textbf{Correctness of aggregate key.}
+        If $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk}, \mathbf{w})$, then
+        \[
+          \mathsf{ACheck}(\mathsf{avk}, \mathbf{vk}, \mathbf{w}) = 1.
+        \]
 
-\paragraph{Aggregate-signature correctness (completeness and acceptance).}
-Consider an execution where the set of honest users and their stakes are fixed, and let $E(m)$ denote the set of all (index, user) pairs that are \emph{eligible} on topic $m.\textsf{topic}$ (eligibility depends on $(\sigma,j,m.\textsf{topic})$ through $Eval$). Let the adversary choose a multiset of local proofs $\{\pi_i\}$ that includes, for at least one collection of indices $J\subseteq\{1,\dots,t\}$, \emph{all} local proofs of honest users for indices in $J$ (completeness for one consistent index set), with pairwise-distinct indices. If $\tau\leftarrow\mathsf{ASig}(\mathbf{vk},\mathbf{w},m,\{\pi_i\})$ is produced, then
-\[
-  \mathsf{AVer}(\mathsf{avk},m,\tau,W)=1
-\]
-except with negligible probability. Intuitively, whenever the aggregator includes a complete set of honest eligible local proofs for some consistent set of lottery indices, the resulting aggregate is accepted.
+  \item \textbf{Correctness of individual signatures.}
+        For every party index $i \in [N]$, let $(sk_i, vk_i)$ be generated by
+        $(sk_i, vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$.
+        If $\sigma_i \leftarrow \mathsf{Sig}(vk_i, w_i, sk_i, j, m)$ and $\sigma_i \neq \bot$, then
+        \[
+          \mathsf{Ver}(vk_i, w_i, j, m, \sigma_i) = 1.
+        \]
 
-\subsection{Security}
+  \item \textbf{Correctness of aggregate signatures.}
+        Let $t \in \mathbb{N}$ and, for each $i \in [t]$, let $(sk_i, vk_i)$ be generated by
+        $(sk_i, vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$ and let $w_i$ be the corresponding stake value.
+        For a message $m$ and a lottery index $j$, let
+        $\sigma_i \leftarrow \mathsf{Sig}(vk_i, w_i, sk_i, j, m)$ be such that $\sigma_i \neq \bot$ for all $i \in [t]$.
+        Let
+        \[
+          \tau \leftarrow \mathsf{ASig}(\mathbf{vk}, \mathbf{w}, m, \{(vk_i,\sigma_i)\}_{i=1}^{t})
+          \quad\text{and}\quad
+          \mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk}, \mathbf{w}).
+        \]
+        If the total stake of these $t$ parties meets the threshold, i.e.,
+        \[
+          \sum_{i=1}^{t} w_i \;\ge\; T,
+        \]
+        then
+        \[
+          \mathsf{AVer}(\mathsf{avk}, m, \tau, T) = 1.
+        \]
+\end{itemize}
+
+
+% \begin{itemize}
+%   \item \textbf{Aggregate key correctness.}
+%         If $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk}, \mathbf{w})$, then
+%         \[
+%           \mathsf{ACheck}(\mathsf{avk}, \mathbf{vk}, \mathbf{w}) = 1.
+%         \]
+
+%   \item \textbf{Individual signature correctness.}
+%         For every party index $i \in [N]$, let $(sk_i, vk_i)$ be generated by
+%         $(sk_i, vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$.
+%         If $\sigma_i \leftarrow \mathsf{Sig}(vk_i, w_i, sk_i, j, m)$ and $\sigma_i \neq \bot$, then
+%         \[
+%           \mathsf{Ver}(vk_i, w_i, j, m, \sigma_i) = 1.
+%         \]
+
+%   \item \textbf{Aggregate signature correctness.}
+%         Let $S \subseteq [N]$ be any subset of parties, and for each $i \in S$ let
+%         $\sigma_i \leftarrow \mathsf{Sig}(vk_i, w_i, sk_i, j, m)$ be such that $\sigma_i \neq \bot$.
+%         Let
+%         \[
+%           \tau \leftarrow \mathsf{ASig}(\mathbf{vk}, \mathbf{w}, m, \{(vk_i,\sigma_i)\}_{i \in S})
+%           \quad\text{and}\quad
+%           \mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk}, \mathbf{w}).
+%         \]
+%         If the total stake of $S$ meets the threshold, i.e.,
+%         \[
+%           \sum_{i \in S} w_i \;\ge\; T,
+%         \]
+%         then
+%         \[
+%           \mathsf{AVer}(\mathsf{avk}, m, \tau, T) = 1.
+%         \]
+% \end{itemize}
+
+
+\subsubsection{Security}
 \paragraph{Stake-based unforgeability $\alpha$-\textsf{UF-CMA}.}
 In the unforgeability experiment, the challenger runs $\mathsf{Setup}$, generates honest keys $(sk_i,vk_i)$, fixes $\mathbf{w}$, computes $\mathsf{avk}$, and gives $(\mathsf{pp},\mathbf{vk},\mathbf{w},\mathsf{avk})$ to the adversary $\mathcal{A}$. The adversary can:
 \begin{itemize}
@@ -226,16 +310,141 @@ and $\tau^\ast$ is \emph{fresh}, i.e., it cannot be obtained by aggregating loca
 \paragraph{Strengthened unforgeability $\alpha$-\textsf{UF-CMA-S}.}
 As above, but the adversary may first register arbitrary public keys (and corresponding stake placement) before $\mathsf{AKey}$ is run (key-substitution/registration stage). The rest of the game is identical. Security requires negligible winning probability for all PPT adversaries.
 
-\medskip
-\noindent\emph{Notes on the model.}
-\begin{itemize}
-  \item Eligibility depends on the topic but not the body. This prevents grinding by changing $\textsf{body}$ while preserving eligibility.
-  \item We adopt the “do not charge unsuccessful attempts’’ rule: an ineligible honest user (output $\bot$) is \emph{not} counted toward the adversarial stake budget; this mirrors the bridge paper’s UF-CMA variant that balances probing versus corruption.
-  \item Completeness in aggregate correctness is enforced against one consistent set of indices; pairwise-distinct indices in $\mathsf{ASig}$ prevent double-counting a lottery win.
-\end{itemize}
+% \medskip
+% \noindent\emph{Notes on the model.}
+% \begin{itemize}
+%   \item Eligibility depends on the topic but not the body. This prevents grinding by changing $\textsf{body}$ while preserving eligibility.
+%   \item We adopt the “do not charge unsuccessful attempts’’ rule: an ineligible honest user (output $\bot$) is \emph{not} counted toward the adversarial stake budget; this mirrors the bridge paper’s UF-CMA variant that balances probing versus corruption.
+%   \item Completeness in aggregate correctness is enforced against one consistent set of indices; pairwise-distinct indices in $\mathsf{ASig}$ prevent double-counting a lottery win.
+% \end{itemize}
+
+% \subsubsection{Security}
+
+% We follow the security definitions for stake-based threshold multi-signature schemes introduced in the bridge framework of Chaidos et al.\ and adapt them to the syntax of
+% \[
+%   \Pi_{\mathsf{STMS}}
+%   =
+%   (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck},
+%    \mathsf{Sig}, \mathsf{Ver}, \mathsf{ASig}, \mathsf{AVer}) .
+% \]
+% We assume that each message $m$ can be written as a pair $m = (\mathsf{topic}, \mathsf{body})$, where
+% $\mathsf{topic}$ ranges over a comparatively small space and $\mathsf{body}$ ranges over a larger space.
+% Eligibility to sign depends on the topic and on the aggregate verification key, but not on the body.
+
+% Let $\alpha \in (0,1)$ be a bound on the adversarial fraction of the total stake.
+% We capture security via two stake-bounded unforgeability notions under chosen-message attacks,
+% denoted $\alpha$-UF-CMA and $\alpha$-UF-CMA-S, defined through a family of games.
+
+% \paragraph{$\alpha$-UF-CMA game.}
+% Fix a security parameter $\lambda \in \mathbb{N}$ and an adversary
+% $\mathcal{A}$.
+% The experiment
+% \[
+%   \mathsf{Exp}^{\alpha\text{-UF-CMA}}_{\Pi_{\mathsf{STMS}},\mathcal{A}}(\lambda)
+% \]
+% proceeds as follows.
+
+% \begin{enumerate}
+%   \item The challenger runs
+%         $\mathsf{pp} \leftarrow \mathsf{Setup}(1^\lambda)$
+%         and generates a vector of key pairs and stakes
+%         \[
+%           \bigl((sk_i,vk_i,w_i)\bigr)_{i \in [N]},
+%         \]
+%         for some $N \in \mathbb{N}$, by invoking
+%         $(sk_i,vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$ for each $i$ and assigning
+%         positive stake values $w_i$.
+%         Let $\mathbf{vk} = (vk_1,\dots,vk_N)$, $\mathbf{w} = (w_1,\dots,w_N)$,
+%         and $W_{\mathsf{tot}} := \sum_{i=1}^{N} w_i$.
+%         The challenger computes
+%         \[
+%           \mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk}, \mathbf{w})
+%         \]
+%         and gives $(\mathsf{pp},\mathbf{vk},\mathbf{w},\mathsf{avk})$ to $\mathcal{A}$.
+
+%   \item The adversary $\mathcal{A}$ interacts adaptively with the following oracles:
+%         \begin{itemize}
+%           \item \emph{Corruption oracle}:
+%                 on input an index $i \in [N]$, returns $sk_i$ and marks $i$ as corrupted.
+%           \item \emph{Key-replacement oracle}:
+%                 on input $(i, vk'_i)$, replaces $vk_i$ by $vk'_i$ and marks $i$ as controlled
+%                 by $\mathcal{A}$.
+%           \item \emph{Signing oracle}:
+%                 on input $(i, m)$, where $m = (\mathsf{topic}, \mathsf{body})$,
+%                 returns $\sigma \leftarrow \mathsf{Sig}(vk_i, w_i, sk_i, j, m)$
+%                 for some lottery index $j$ chosen according to the scheme
+%                 (or returns $\bot$ if the scheme declares $i$ ineligible for $(m,j)$).
+%                 Whenever this oracle returns a non-$\bot$ signature for some message
+%                 $m$ with topic $\mathsf{topic}$, the corresponding index $i$ is
+%                 counted as under adversarial control for that topic.
+%         \end{itemize}
+%         We let $C_{\mathsf{topic}}$ denote the set of indices that are considered
+%         under adversarial control for a topic $\mathsf{topic}$, i.e., indices that
+%         have been corrupted, whose keys have been replaced, or for which the signing
+%         oracle returned a non-$\bot$ signature on some message with that topic.
+
+%   \item Eventually $\mathcal{A}$ outputs a forgery consisting of a message
+%         $m^\ast = (\mathsf{topic}^\ast,\mathsf{body}^\ast)$,
+%         an aggregate verification key $\mathsf{avk}^\ast$,
+%         an aggregate signature $\tau^\ast$,
+%         a stake threshold parameter $T^\ast$,
+%         and a candidate description $(\mathbf{vk}^\ast,\mathbf{w}^\ast)$ of the
+%         underlying verification keys and stakes.
+
+%   \item The experiment checks the following conditions:
+%         \begin{enumerate}
+%           \item \emph{Well-formedness:}
+%                 \[
+%                   \mathsf{ACheck}(\mathsf{avk}^\ast,\mathbf{vk}^\ast,\mathbf{w}^\ast) = 1
+%                   \quad\text{and}\quad
+%                   \mathsf{AVer}(\mathsf{avk}^\ast, m^\ast, \tau^\ast, T^\ast) = 1.
+%                 \]
+%           \item \emph{Non-triviality:} the attack is not a trivial re-packaging of
+%                 signatures already obtained from the oracles.  In particular, the
+%                 aggregate signature $\tau^\ast$ cannot be obtained by merely aggregating
+%                 signatures on $m^\ast$ that were returned by the signing oracle or
+%                 produced using corrupted secret keys.
+%           \item \emph{Stake bound:} writing
+%                 $C^\ast := C_{\mathsf{topic}^\ast}$ for the set of indices counted as
+%                 under adversarial control for topic $\mathsf{topic}^\ast$, and letting
+%                 $W_{\mathsf{adv}} := \sum_{i \in C^\ast} w_i$, we require
+%                 \[
+%                   \frac{W_{\mathsf{adv}}}{W_{\mathsf{tot}}} \;\le\; \alpha .
+%                 \]
+%         \end{enumerate}
+%         The experiment outputs $1$ if all checks pass, and $0$ otherwise.
+% \end{enumerate}
+
+% The \emph{$\alpha$-UF-CMA advantage} of $\mathcal{A}$ against $\Pi_{\mathsf{STMS}}$ is defined as
+% \[
+%   \mathsf{Adv}^{\alpha\text{-UF-CMA}}_{\Pi_{\mathsf{STMS}},\mathcal{A}}(\lambda)
+%   :=
+%   \Pr\bigl[
+%     \mathsf{Exp}^{\alpha\text{-UF-CMA}}_{\Pi_{\mathsf{STMS}},\mathcal{A}}(\lambda) = 1
+%   \bigr] .
+% \]
+% We say that $\Pi_{\mathsf{STMS}}$ is \emph{$\alpha$-UF-CMA secure} if this advantage is negligible
+% in $\lambda$ for every probabilistic polynomial-time adversary $\mathcal{A}$.
+
+% \paragraph{$\alpha$-UF-CMA-S game.}
+% The static variant $\alpha$-UF-CMA-S is defined analogously, but with two modifications:
+% (i) the adversary must perform all corruption and key-replacement queries before making any
+% signing queries, and (ii) when computing the adversarial stake for the forgery, we only count
+% stake belonging to indices that were corrupted or that were forced to sign the exact message
+% $m^\ast$ being forged (rather than any message with the same topic).
+% We denote the corresponding advantage by
+% $\mathsf{Adv}^{\alpha\text{-UF-CMA-S}}_{\Pi_{\mathsf{STMS}},\mathcal{A}}(\lambda)$
+% and say that $\Pi_{\mathsf{STMS}}$ is \emph{$\alpha$-UF-CMA-S secure} if this advantage is negligible
+% for every probabilistic polynomial-time adversary.
+
+% In what follows we assume that the underlying STMS scheme
+% $\Pi_{\mathsf{STMS}}$ satisfies both $\alpha$-UF-CMA and $\alpha$-UF-CMA-S
+% for suitable choices of the adversarial stake bound $\alpha$.
 
 
 \subsection{Instantiation}
+
+\subsubsection{Mithril}
 
 We write the Mithril scheme as
 \[
@@ -251,10 +460,10 @@ We write the Mithril scheme as
         
         fix a dense mapping / eligibility function
         \[
-        Eval : ( msg, index, \sigma) \mapsto \{0,1\}^\lambda,
+        \mathsf{Eval} : ( msg, index, \sigma) \mapsto \{0,1\}^\lambda,
         \]
         % \[
-        %   Eval : G_1 \times \{1,\dots,\mu\} \times \{0,1\}^* \to \{0,1\}^\lambda,
+        %   \mathsf{Eval} : G_1 \times \{1,\dots,\mu\} \times \{0,1\}^* \to \{0,1\}^\lambda,
         % \]
         a weighting function
         \[
@@ -273,13 +482,13 @@ We write the Mithril scheme as
         \]
         Output
         \[
-          \mathsf{pp}=(q,G_1,G_2,G_T,g_1,g_2,e,H,Eval,\varphi,\mu,k).
+          \mathsf{pp}=(q,G_1,G_2,G_T,g_1,g_2,e,H,\mathsf{Eval},\varphi,\mu,k).
         \]
 
   \item $(sk,vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:\\
-        run $\Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp})$ 
+        parse $pp_{BLS}$ for BLS signature, run $\Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp_{BLS}})$ 
         \[
-          (sk,vk) \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp})
+          (sk,vk) \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{KGen}(\mathsf{pp_{BLS}})
         \]
         Output $(sk,vk)$.
 
@@ -310,7 +519,7 @@ We write the Mithril scheme as
         \]
         compute the eligibility value
         \[
-          ev \leftarrow Eval(\sigma, j, m),
+          ev \leftarrow \mathsf{Eval}(\sigma, j, m),
         \]
         and check the threshold
         % \[

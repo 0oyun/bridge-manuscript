@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1764043870.34027 "/Users/wuyun/Documents/Project/bridge-manuscript/2025.11/2025.11.25/snarkifying_mithril.tex" "snarkifying_mithril.pdf" "snarkifying_mithril" 1764043870.73027 0
-  "/Users/wuyun/Documents/Project/bridge-manuscript/2025.11/2025.11.25/snarkifying_mithril.tex" 1764043869.98765 23891 752a29c019fc6bac5bfe59375ddb3785 ""
+["pdflatex"] 1764062992.1203 "/Users/wuyun/Documents/Project/bridge-manuscript/2025.11/2025.11.25/snarkifying_mithril.tex" "snarkifying_mithril.pdf" "snarkifying_mithril" 1764062992.49923 0
+  "/Users/wuyun/Documents/Project/bridge-manuscript/2025.11/2025.11.25/snarkifying_mithril.tex" 1764062991.54019 34106 aab6d8f3f0f65168a5d3666775229508 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/tcrm1000.tfm" 1136768653 1536 e07581a4bb3136ece9eeb4c3ffab8233 ""
@@ -145,8 +145,8 @@
   "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1758186268 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1758186208 3345739 41815f5f5eef6eed61400d3d7f6119b2 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "snarkifying_mithril.aux" 1764043870.67537 2587 bb45e1a2580cd954272680e337becba4 "pdflatex"
-  "snarkifying_mithril.tex" 1764043869.98765 23891 752a29c019fc6bac5bfe59375ddb3785 ""
+  "snarkifying_mithril.aux" 1764062992.45133 1465 ac563551df5eccbaaa70536b0a4102f5 "pdflatex"
+  "snarkifying_mithril.tex" 1764062991.54019 34106 aab6d8f3f0f65168a5d3666775229508 ""
   (generated)
   "snarkifying_mithril.aux"
   "snarkifying_mithril.log"
