@@ -1,0 +1,1012 @@
+\documentclass{article}
+% \documentclass[twocolumn]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tikz} 
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+
+\newtheorem{theorem}{Theorem}[section]
+
+
+
+
+\newcommand{\ppBLS}[0]{\mathsf{pp}_{\mathsf{BLS}}}
+\newcommand{\ppSNARK}[0]{\mathsf{pp}_{\mathsf{SNARK}}}
+\newcommand{\pp}[0]{\mathsf{pp}}
+\newcommand{\sk}[0]{\mathsf{sk}}
+\newcommand{\vk}[0]{\mathsf{vk}}
+\newcommand{\avk}[0]{\mathsf{avk}}
+\newcommand{\ZZ}[0]{\mathbb{Z}}
+\newcommand{\mkpth}[0]{\mathsf{p}}
+\newcommand{\topic}[0]{\mathsf{topic}}
+\newcommand{\Adv}[0]{\mathsf{Adv}}
+% (Notation) uniform sampling
+\newcommand{\getsr}{\xleftarrow{\$}}
+% (Notation) a counter variable used in proofs
+\newcommand{\ctr}{\mathsf{ctr}}
+% (Notation) negligible function
+\newcommand{\negl}{\mathsf{negl}}
+\newcommand{\poly}{\mathsf{poly}}
+
+\newcommand{\mybox}[5]{
+    \begin{center}
+    \begin{tikzpicture}
+        \node[anchor=text,text width=\columnwidth+1.0cm, draw, rounded corners, line width=1pt, fill=#3, inner sep=5mm] (big) {\\#4};
+        \node[draw, rounded corners, line width=.5pt, fill=#2, anchor=west, xshift=5mm] (small) at (big.north west) {#1};
+    \end{tikzpicture}
+    % \caption{#5}
+    \end{center}
+}
+
+
+\title{Mithril in Game-based Syntax}
+\author{
+     Wuyunsiqin\textsuperscript{1},
+    Bingsheng Zhang\textsuperscript{1},  Markulf Kohlweiss\textsuperscript{2}\\
+    \textsuperscript{1}Zhejiang University, \{oyun, bingsheng\}@zju.edu.cn \\
+    \textsuperscript{2}University of Edinburgh \& Input Output, mkohlwei@ed.ac.uk
+}
+
+\begin{document}
+
+\maketitle
+
+
+
+\section{Preliminaries}
+\subsection{Notations}
+
+There are some basic notations and conventions used throughout this work.
+The security parameter is denoted by $\lambda \in \mathbb{N}$.
+For any finite set $S$, we write $|S|$ for its cardinality. We use the notation $ x \xleftarrow{\$}S$ to indicate that $x$ is sampled uniformly at random from the finite set $S$.
+%
+A function $\mathsf{negl} : \mathbb{N} \to \mathbb{R}_{\ge 0}$ is called \emph{negligible} if for every polynomial $p(\cdot)$ there exists $N \in \mathbb{N}$ such that for all $\lambda \ge N$ it holds that $\mathsf{negl}(\lambda) < 1/p(\lambda)$. We write $\mathsf{negl}(\lambda)$ to denote an unspecified negligible function in the security parameter~$\lambda$.
+
+%\subsection{Elliptic Curve and Its Encoding}
+%todo: elligator 
+
+\subsection{BLS Signature Scheme}
+
+Let $\lambda$ be the security parameter. We assume a bilinear group
+generation algorithm which, on input $1^\lambda$, outputs
+ $ (q, G_1, G_2, G_T, g_1, g_2, e)$,
+where $G_1,G_2,G_T$ are cyclic groups of prime order $q$, $g_1\in G_1$,
+$g_2\in G_2$ are generators, and
+$e : G_1 \times G_2 \to G_T$ is a bilinear pairing. Let
+$H : \{0,1\}^* \to G_1$ be a secure hash function modeled as a random oracle.
+We write the BLS signature scheme as
+$
+  \Pi_{\mathsf{BLS}} := (\mathsf{Setup}, \mathsf{KGen}, \mathsf{Sign}, \mathsf{Ver}).
+$
+
+\begin{itemize}
+  \item $\ppBLS \leftarrow \mathsf{Setup}(1^\lambda)$:  
+        Run the group generator to obtain
+        $(q, G_1, G_2, G_T, g_1, g_2, e)$ and pick a suitable $H$.
+        Output 
+        $\ppBLS := (q, G_1, G_2, G_T, g_1, g_2, e, H).$
+
+  \item $(sk,vk) \leftarrow \mathsf{KGen}(\ppBLS)$:  
+        Sample a secret key $sk \xleftarrow{\$} \mathbb{Z}_q$, and set
+        $vk = g_2^{sk} \in G_2.$
+        Output the key pair $(sk, vk)$.
+  \item $\sigma \leftarrow \mathsf{Sign}(\ppBLS, sk, msg)$:  
+        On input $\ppBLS$, the secret key $sk$, and the message $msg \in \{0,1\}^*$, compute
+        $h \leftarrow H(msg) \in G_1$ and set
+        $\sigma = h^{sk} \in G_1.$
+        Output the signature $\sigma$.
+
+  \item $b \leftarrow \mathsf{Ver}(\ppBLS, vk, msg, \sigma)$, where $b \in \{0,1\}$:  
+        Compute $h \leftarrow H(msg)$ and output $b = 1\;\text{iff}\;e(\sigma, g_2) = e(h, vk)$, and $b = 0$ otherwise.
+\end{itemize}
+
+\subsection{Merkle Tree}
+
+Let $H_{\mathsf{MT}}  : \{0,1\}^* \to \{0,1\}^\lambda$ be a collision-resistant hash function.
+We denote the Merkle tree primitive by
+$
+  \Pi_{\mathsf{MT}} := (\mathsf{Create}, \mathsf{Check}).
+$
+
+\begin{itemize}
+
+  \item $\mathsf{rt} \leftarrow \mathsf{Create}(\mathbf{m})$:
+        On input a vector of messages
+        $\mathbf{m} = (m_1,\dots,m_N)$, set leaves
+        $\ell_i := H_{\mathsf{MT}}(m_i)$ and output the Merkle root
+        $\mathsf{rt}$.
+
+  \item $b \leftarrow \mathsf{Check}(\mathsf{rt}, m, \mkpth)$, where $b \in \{0,1\}$:
+        On input a root $\mathsf{rt}$, a message $\mathsf{m}$, and an authentication path $\mkpth$, re-compute the root from the leaf
+        $\ell := H_{\mathsf{MT}}(\mathsf{m})$ and $p$. Output $b = 1$ iff the
+        re-computed root equals to $\mathsf{rt}$, and $b = 0$ otherwise.
+
+\end{itemize}
+
+\subsection{SNARK}
+
+Let $x\in\mathcal{L}$ be a statement, $w\in\mathcal{W}$ be a witness and $(x,w) \in \mathcal{R}$ be an NP relation.We denote a succinct non-interactive argument (SNARK) as a tuple $\Pi_{\mathsf{SNARK}} := (\mathsf{Setup}, \mathsf{Prove}, \mathsf{Verify}).$
+\begin{itemize}
+  \item $\ppSNARK \leftarrow \mathsf{Setup}(1^\lambda,\mathcal{R})$: outputs public parameters $\ppSNARK$ for relation $\mathcal{R}$.
+  \item $\pi \leftarrow \mathsf{Prove}(\ppSNARK, x, w)$: outputs a proof $\pi$ for statement $x$ with witness $w$.
+  \item $b \leftarrow \mathsf{Verify}(\ppSNARK, x, \pi)$, where $b\in\{0,1\}$: outputs $1$ if $\pi$ is accepted for $x$, and $0$ otherwise.
+\end{itemize}
+We require that $\Pi_{\mathsf{SNARK}}$ satisfies completeness, knowledge soundness, and succinctness.
+
+\paragraph{Completeness.}
+For all $(x,w)\in\mathcal{R}$ and all $\lambda\in\mathbb{N}$, if $\ppSNARK\leftarrow\mathsf{Setup}(1^\lambda,\mathcal{R})$ and $\pi\leftarrow\mathsf{Prove}(\ppSNARK,x,w)$, then $\Pr[\mathsf{Verify}(\ppSNARK,x,\pi)=1]=1$.
+
+\paragraph{Knowledge soundness.}
+For every PPT adversary $\mathcal{A}$, there exists a PPT extractor $\mathcal{X}$ such that for any $(\ppSNARK,x)$ output by $\mathsf{Setup}(1^\lambda,\mathcal{R})$ and any proof $\pi$ output by $\mathcal{A}(\ppSNARK)$, we have $\Pr[\mathsf{Verify}(\ppSNARK,x,\pi)=1 \land (x,w)\notin\mathcal{R}\ \text{where}\ w\leftarrow \mathcal{X}^{\mathcal{A}}(\ppSNARK,x,\pi)]\le \negl(\lambda)$. Equivalently, whenever $\mathcal{A}$ outputs an accepting proof for $x$, the extractor can output a witness $w$ such that $(x,w)\in\mathcal{R}$ except with negligible probability.
+
+\textbf{Remark.} In this work, we need black-box extractability. Many SNARK constructions in the literature have a black-box extractor.
+
+\paragraph{Succinctness.}
+There exists a polynomial $\poly(\cdot)$ such that for all $\lambda$ and all $(x,w)\in\mathcal{R}$, the proof size $|\pi|$ and verification time of $\mathsf{Verify}(\ppSNARK,x,\pi)$ are bounded by $\poly(\lambda,\log|x|)$.
+
+
+
+
+\section{Stake-based threshold multi-signature}
+
+
+\subsection{Syntax}
+
+We consider a stake-based threshold multi-signature (STMS) scheme whose acceptance is determined on a per-stake basis via a ``$t$ wins in $n$ lotteries'' parametrization, for some integers $t,n \in \mathbb{N}$.
+
+
+
+\[
+  \Pi_{\mathsf{STMS}}^{t,n}
+  =
+  (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck},
+   \mathsf{Sig}, \mathsf{Ver}, \mathsf{ASig}, \mathsf{AVer}) .
+\]
+
+\begin{itemize}
+  \item $\mathsf{pp} \leftarrow \mathsf{Setup}(1^\lambda)$:  
+        on input a security parameter $1^\lambda$, outputs public system parameters $\mathsf{pp}$.  
+        These parameters are implicit inputs to all other algorithms.
+
+  \item $(\sk,\vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:  
+        on input the public parameters $\mathsf{pp}$, generates a signing/verification key pair $(\sk,\vk)$ for a single party.
+
+  \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\, \mathbf{w})$:  
+        given a list of verification keys $\mathbf{vk} := (\vk_1,\ldots,\vk_N)$ and a matching stake vector $\mathbf{w} := (w_1,\ldots,w_N)$,  
+        where $N \in \mathbb{N}$ denotes the number of users, deterministically produces an aggregate verification key $\mathsf{avk}$.
+
+  \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk},\, \mathbf{vk},\, \mathbf{w})$, where $b \in \{0,1\}$:  
+        deterministically checks whether $\mathsf{avk}$ is a valid aggregate verification key for $(\mathbf{vk},\mathbf{w})$. 
+        Output $b = 1$ if it accepts and $b = 0$ otherwise.
+
+  \item $\sigma \leftarrow \mathsf{Sig}(\mathbf{vk},\, \mathbf{w},\, \sk,\, j,\, m)$:  
+        attempts to produce a signature $\sigma$ for message $m$ and lottery index $j \in [n]$  
+        under verification key $\vk$, secret key $\sk$, and stake $w$.  
+        It outputs $\bot$ if the user is ineligible for $(m,j)$ under stake $w$.
+
+  \item $b \leftarrow \mathsf{Ver}(\mathbf{vk}, \mathbf{w}, i, j, m, \sigma)$, where $b \in \{0,1\}$:  
+        given a verification key $\vk$, a stake value $w$, a lottery index $j$, a message $m$, and a signature $\sigma$,  
+        deterministically checks whether $\sigma$ is a valid signature for $(m,j)$ under $(\vk_i,w_i)$  
+        and outputs $b = 1$ if it accepts and $b = 0$ otherwise.
+
+  \item $\tau \leftarrow \mathsf{ASig}(\mathbf{vk},\, \mathbf{w},\, m,\, \{(\vk_i,\sigma_i)\}_{i=1}^{t})$:  
+        given $(\mathbf{vk},\mathbf{w})$, a message $m$, and a multiset $\{(vk_i,\sigma_i)\}_{i=1}^{t}$ of signatures,  
+        attempts to produce an aggregate signature $\tau$; it outputs $\bot$ if the provided inputs are insufficient or inconsistent.
+
+  \item $b \leftarrow \mathsf{AVer}(\mathsf{avk},\, m,\, \tau,\, t)$, where $b \in \{0,1\}$:  
+        given a message $m$, an aggregate verification key $\mathsf{avk}$, an aggregate signature $\tau$,  
+        and a stake threshold parameter $T$, outputs $b = 1$ if $\tau$ is accepted as a valid aggregate  
+        (stake-based threshold) multi-signature on $m$ under $\mathsf{avk}$ and threshold $T$, and $b = 0$ otherwise.
+        % todo: t/T 查证是stake 还是lottery
+
+\end{itemize}
+
+
+
+\subsubsection{Correctness}
+
+Let 
+$
+  \Pi_{\mathsf{STMS}}
+  =
+  (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck},
+   \mathsf{Sig}, \mathsf{Ver}, \mathsf{ASig}, \mathsf{AVer})
+$
+be a stake-based threshold multi-signature (STMS) scheme as specified above.  
+Let $\mathcal{M}$ denote the message space.
+
+\paragraph{Definition (Correctness).}
+We say that $\Pi_{\mathsf{STMS}}$ is \emph{correct} if for every security parameter $\lambda \in \mathbb{N}$,
+every number of users $N \in \mathbb{N}$, every vector of verification keys
+$\mathbf{vk} := (\vk_1,\dots,\vk_N)$ generated by $\mathsf{KGen}$, every stake vector
+$\mathbf{w} := (w_1,\dots,w_N) \in(\ZZ^+)^{N}$, every message $m \in \mathcal{M}$, 
+every stake threshold parameter $T \in \mathbb{N} $, and every lottery index $j \in \{1,...,n\}$, where $n$ is lottery index range. 
+The following properties hold except with negligible probability in $\lambda$ over the randomness of all algorithms involved.
+
+
+\begin{itemize}
+  \item \textbf{Correctness of aggregate key.}
+        For  every vector of verification keys
+$\mathbf{vk} := (\vk_1,\dots,\vk_N)$ generated by $\mathsf{KGen}$, and every stake vector
+$\mathbf{w} := (w_1,\dots,w_N) \in(\ZZ^+)^{N}$, let $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk}, \mathbf{w})$, we have 
+        \[
+          \Pr[\mathsf{ACheck}(\mathsf{avk}, \mathbf{vk}, \mathbf{w}) = 1] = 1-\mathsf{negl}(\lambda).
+        \]
+
+  \item \textbf{Correctness of individual signatures.}
+        For every party index $i \in [N]$, let $\mathsf{pp}\leftarrow\mathsf{Setup}(1^\lambda)$, 
+        $(\sk_i, \vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$,
+         $\sigma_i \leftarrow \mathsf{Sig}(\mathbf{vk}, \mathbf{w}, \sk_i, j, m)$. If $\sigma_i \neq \bot$, we have
+        \[
+          \Pr[\mathsf{Ver}(\mathbf{vk},\, \mathbf{w}, i, j, m, \sigma_i) = 1] = 1 -\mathsf{negl}(\lambda).
+        \]
+
+  \item \textbf{Correctness of aggregate signatures.}
+        Let $t \in \mathbb{N}$, and let $\{I_\eta\}_{\eta \in[t]}$ be a set of indices, let $(\sk_{I_\eta}, \vk_{I_\eta})$ be generated by
+        $(\sk_{I_\eta}, \vk_{I_\eta}) \leftarrow \mathsf{KGen}(\mathsf{pp})$ and let $w_{I_\eta}$ be the corresponding stake value.
+        For a message $m$ and a lottery index $j$, let
+        $\sigma_{I_\eta} \leftarrow \mathsf{Sig}(\vk_{I_\eta}, w_{I_\eta}, \sk_{I_\eta}, j, m)$ be such that $\sigma_{I_\eta} \neq \bot$.
+        Let
+        \[
+          \tau \leftarrow \mathsf{ASig}(\mathbf{vk}, \mathbf{w}, m, \{(\vk_{I_\eta},\sigma_{I_\eta})\}_{\eta=1}^{t})
+          \quad\text{and}\quad
+          \mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk}, \mathbf{w}).
+        \]
+
+        we have 
+        \[
+          \Pr[\mathsf{AVer}(\mathsf{avk}, m, \tau, T) = 1] = 1 -\mathsf{negl}(\lambda).
+        \]
+\end{itemize}
+
+
+
+\subsubsection{Security}
+
+
+\paragraph{Stake-based unforgeability $\alpha$-\textsf{UF-CMA}.} \ 
+\newline
+Let $\Pi_{\mathsf{STMS}}
+  =
+  (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck},
+   \mathsf{Sig}, \mathsf{Ver}, \mathsf{ASig}, \mathsf{AVer})$ be an STMS scheme as above, and consider the following experiment for an adversary A:
+   
+\mybox{$\alpha$-\textsf{UF-CMA} experiment}{white!40}{white!10}{
+
+\begin{enumerate}
+    \item Runs $pp \leftarrow \mathsf{Setup}(1^\lambda)$. Let $\mathcal{A}$ takes input as $pp$, and outputs a stake vector  $\mathbf{w} := (w_1,\dots,w_N) \in (\mathbb{Z}^+)^N$. For each $i \in [N]$ samples a key pair $(\sk_i,\vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$. 
+    
+   % Computes the aggregate verification key $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$, where $\mathbf{vk} := (\vk_1,\dots,\vk_N)$. 
+   Fix the number of total lottery indices $n$, and the threshold $t$. 
+    Computes the total stake \(W :=\sum_{i=1}^N w_i\) and then  gives $(\mathbf{vk}, n, t)$ to $\mathcal{A}$, where $\mathbf{vk} := (\vk_1,\dots,\vk_N)$. It then initializes 
+    an empty set $\mathcal{C} \subseteq [N]$ and 
+    an empty set $\mathcal{Q}_{\mathsf{topic}}$ to record signing queries. %$\mathcal{Q} \subseteq [N] \times [n] \times \mathcal{M}$
+    
+    \item The adversary $\mathcal{A}$ may make corruptions, key substitution and signing oracle queries at any time before it outputs.
+    \begin{itemize}
+        \item Corruption. The adversary $\mathcal{A}$ queries an index $i \in [N]$. If $i \notin \mathcal{C}$, $\mathcal{C} = \mathcal{C} \cup \{i\} $ add $i$ to $\mathcal{C}$ and returns $\sk_i$ to $\mathcal{A}$. 
+        \item Key substitution. The adversary $\mathcal{A}$ modifies a verification key $\mathbf{vk}[i] \leftarrow \vk_i^\ast$. If $i \notin \mathcal{C}$, $\mathcal{C} = \mathcal{C} \cup \{i\}$. 
+        \item Signing oracle queries. The adversary $\mathcal{A}$ queries a user index $i \in [N]$, and a message $m \in \mathcal{M}$. 
+        If $i \notin \mathcal{C}$, 
+        Computes a set of \(\sigma \leftarrow \mathsf{Sig}(\mathbf{vk}, \mathbf{w}, \sk_i, j, m)\) for every lottery index $j \in [n]$ and returns the set to $\mathcal{A}$. Records $(i,m.\mathsf{topic})$ in the set $\mathcal{Q}_{\mathsf{topic}}$. (Here each message $m \in \mathcal{M}$ is assumed to be a structured pair $m = (\mathsf{topic}, \mathsf{body})$.)
+    \end{itemize}
+    \item The adversary $\mathcal{A}$ outputs $(\avk^\ast, \mathbf{vk}^\ast,m^\ast,\tau^\ast)$, where $\mathbf{vk}^\ast = (\vk^\ast_1,\dots,\vk^\ast_N)$ is a vector of verification keys, $m^\ast \in \mathcal{M}$ is a message and $\tau^\ast$ is an aggregate signature.
+    Let \(\mathcal{C}^\ast :=\{i\ |\ i\in \mathcal{C}\ or\ \exists \ i\ s.t. \ (i,m^\ast.\mathsf{topic}) \in \mathcal{Q}_{\mathsf{topic}} \} \).
+    
+    Return 1 if 
+    \(\mathsf{ACheck}(\avk^\ast,\mathbf{vk}^\ast,\mathbf{w})=1,
+      \mathsf{AVer}(\avk^\ast,m^\ast,\tau^\ast,t)=1,\) and $\sum_{i \in C^\ast} w_i < \alpha \sum_{i \in [N]} w_i . $
+    
+\end{enumerate}
+}
+
+We say that $\Pi_{\mathsf{STMS}}$ is $\alpha$-\textsf{UF-CMA} secure if for every PPT adversary $\mathcal{A}$ :
+
+\[
+    \mathsf{Adv}^{\alpha\textbf{-UF-CMA}}_{\mathcal{A},\mathsf{STMS}}(\lambda) := \Pr[\alpha\textbf{-UF-CMA}(\lambda) = 1 ]< \mathsf{negl}(\lambda).
+\]
+% the probability that $\mathcal{A}$ wins the above experiment is negligible in the security parameter $\lambda$.
+
+
+%  The adversary can:
+% \begin{itemize}
+%   \item query \emph{signing oracles} for any honest user $i$, any $j$, and any message $m$, receiving $\mathsf{Sig}(vk_i,w_i,sk_i,j,m)$;
+%   \item \emph{corrupt} users to obtain $sk_i$ (and then act under those keys).
+% \end{itemize}
+% Let $C^\ast$ be the set of corrupted users. Let $H^\ast$ be the set of honest users that \emph{participated} on the forged topic (made at least one signing query for the challenge topic) under the forged aggregate key. The experiment \emph{charges} only successful eligibility (i.e., $\mathsf{Sig}\neq\bot$) and enforces the stake bound
+% \[
+%   \sum_{i\in C^\ast \cup H^\ast} w_i \;\le\; \alpha\, W .
+% \]
+% Finally, $\mathcal{A}$ outputs $(\mathbf{vk}^\ast,\mathsf{avk}^\ast,m^\ast,\tau^\ast)$; it wins if
+% \[
+%   \mathsf{ACheck}(\mathsf{avk}^\ast,\mathbf{vk}^\ast,\mathbf{w})=1,\quad
+%   \mathsf{AVer}(\mathsf{avk}^\ast,m^\ast,\tau^\ast,W)=1,
+% \]
+% and $\tau^\ast$ is \emph{fresh}, i.e., it cannot be obtained by aggregating local proofs returned (or derivable) from oracle responses. An STMS is $\alpha$-\textsf{UF-CMA} secure if every PPT adversary wins with only negligible probability.
+
+% \paragraph{Static unforgeability $\alpha$-\textsf{UF-CMA-S}.}
+% As above, but the adversary may not first register arbitrary public keys (and corresponding stake placement) before $\mathsf{AKey}$ is run (key-substitution/registration stage). The rest of the game is identical. Security requires negligible winning probability for all PPT adversaries.
+
+
+\paragraph{Static stake-based unforgeability $\alpha$-\textsf{UF-CMA-s}.} \ 
+\newline
+Let $\Pi_{\mathsf{STMS}}
+  =
+  (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck},
+   \mathsf{Sig}, \mathsf{Ver}, \mathsf{ASig}, \mathsf{AVer})$ be an STMS scheme as above, and consider the following experiment for an adversary A:
+   
+\mybox{$\alpha$-\textsf{UF-CMA-s} experiment}{white!40}{white!10}{
+
+\begin{enumerate}
+    % \item Runs $pp \leftarrow \mathsf{Setup}(1^\lambda)$, fixes a number of users $N \in \mathbb{N}$, and for each $i \in [N]$ samples a key pair$(\sk_i,\vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$. 
+    
+    % It then fixes a stake vector  $\mathbf{w} := (w_1,\dots,w_N) \in (\mathbb{Z}^+)^N$and computes the aggregate verification key $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$, where $\mathbf{vk} := (\vk_1,\dots,\vk_N)$. Fix the number of total lottery indices $n$, and the threshold k. 
+    
+    % Computes the total stake \(W :=\sum_{i=1}^N w_i\) and then  gives $(\mathsf{pp}, N, \mathbf{vk}, \mathbf{w}, \mathsf{avk}, n, k)$ to $\mathcal{A}$. It then initializes 
+    % an empty set $\mathcal{C} \subseteq [N]$ and 
+    % an empty set $\mathcal{Q}$ to record signing queries. %$\mathcal{Q} \subseteq [N] \times [n] \times \mathcal{M}$
+    \item Runs $pp \leftarrow \mathsf{Setup}(1^\lambda)$. Let $\mathcal{A}$ takes input as $pp$, and outputs a stake vector  $\mathbf{w} := (w_1,\dots,w_N) \in (\mathbb{Z}^+)^N$. For each $i \in [N]$ samples a key pair $(\sk_i,\vk_i) \leftarrow \mathsf{KGen}(\mathsf{pp})$. 
+    
+    Fix the number of total lottery indices $n$, and the threshold $t$. 
+    Computes the total stake \(W :=\sum_{i=1}^N w_i\) and then  gives $(\mathbf{vk}, n, t)$ to $\mathcal{A}$, where $\mathbf{vk} := (\vk_1,\dots,\vk_N)$. It then initializes 
+    an empty set $\mathcal{C} \subseteq [N]$ and 
+    an empty set $\mathcal{Q}_{\mathsf{topic}}$ to record signing queries. %$\mathcal{Q} \subseteq [N] \times [n] \times \mathcal{M}$
+    
+
+    
+    \item The adversary $\mathcal{A}$ may make corruptions and key substitutions only before its first signing oracle query.
+    \begin{itemize}
+        \item Corruption. The adversary $\mathcal{A}$ queries an index $i \in [N]$. If $i \notin \mathcal{C}$, $\mathcal{C} = \mathcal{C} \cup \{i\} $ add $i$ to $\mathcal{C}$ and returns $\sk_i$ to $\mathcal{A}$.
+        \item Key substitution. The adversary $\mathcal{A}$ modifies a verification key $\mathbf{vk}[i] \leftarrow \vk_i^\ast$. If $i \notin \mathcal{C}$, $\mathcal{C} = \mathcal{C} \cup \{i\}$. 
+        \item Signing oracle queries. The adversary $\mathcal{A}$ queries a user index $i \in [N]$, and a message $m \in \mathcal{M}$. 
+        If $i \notin \mathcal{C}$, 
+        Computes a set of \(\sigma \leftarrow \mathsf{Sig}(\mathbf{vk}, \mathbf{w}, \sk_i, j, m)\) for every lottery index $j \in [n]$ and returns the set to $\mathcal{A}$. Records $(i,m)$ in the set $\mathcal{Q}$.
+    \end{itemize}
+    \item The adversary $\mathcal{A}$ outputs $(\mathbf{vk}^\ast,m^\ast,\tau^\ast)$, where $\mathbf{vk}^\ast = (\vk^\ast_1,\dots,\vk^\ast_N)$ is a vector of verification keys, $m^\ast \in \mathcal{M}$ is a message and $\tau^\ast$ is an aggregate signature.
+    Let \(\mathcal{C}^\ast :=\{i\ |\ i\in \mathcal{C}\ or\ \exists \ i\ s.t. \ (i,m^\ast) \in \mathcal{Q} \} \).
+    
+    The adversary $\mathcal{A}$ wins if 
+    \(\mathsf{ACheck}(\avk^\ast,\mathbf{vk}^\ast,\mathbf{w})=1,
+      \mathsf{AVer}(\avk^\ast,m^\ast,\tau^\ast,t)=1,\) and $\sum_{i \in C^\ast} w_i < \alpha \sum_{i \in [N]} w_i . $
+    
+\end{enumerate}
+}
+
+% We say that $\Pi_{\mathsf{STMS}}$ is $\alpha$-\textsf{UF-CMA-s} secure if for every PPT adversary $\mathcal{A}$ the probability that $\mathcal{A}$ wins the above experiment is negligible in the security parameter $\lambda$.
+We say that $\Pi_{\mathsf{STMS}}$ is $\alpha$-\textsf{UF-CMA-s} secure if for every PPT adversary $\mathcal{A}$ :
+
+\[
+    \mathsf{Adv}^{\alpha\textbf{-UF-CMA-s}}_{\mathcal{A},\mathsf{STMS}}(\lambda) := \Pr[\alpha\textbf{-UF-CMA-s}(\lambda) = 1 ]< \mathsf{negl}(\lambda).
+\]
+
+\subsection{Instantiation}
+
+\subsubsection{Mithril}\label{sec:mithril}
+
+We write the Mithril scheme as
+\[
+  \Pi_{\mathsf{Mithril}} :=(\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck}, \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}).
+\]
+
+\begin{itemize}
+
+  \item $(\pp ) \leftarrow \mathsf{Setup}(1^\lambda)$:\\
+        run $\Pi_{\mathsf{BLS}}.\mathsf{Setup}(1^\lambda)$ to obtain $\ppBLS := (q,G_1,G_2,G_T,g_1,g_2,e,H)$
+        
+        fix a dense mapping function based on Elligator squared 
+        \[
+        \mathsf{Eval} : G_1 \times \mathbb{N} \times \mathcal{M}
+        % ( msg, index, \sigma) 
+        \mapsto \{0,1\}^\lambda,
+        \]
+        % \[
+        %   \mathsf{Eval} : G_1 \times \{1,\dots,\mu\} \times \{0,1\}^* \to \{0,1\}^\lambda,
+        % \]
+        a weighting function
+        \[
+          \varphi : [0,1] \to [0,1],
+        \]
+        e.g. $\varphi(w) = 1-(1-f)^w$.
+        Here $w$ denotes the normalized stake fraction, and $f\in(0,1)$ is the overall winning rate.
+
+        Index range
+        \[
+          n \in \mathbb{N}, \text{with } n > \log^2\lambda.
+        \]
+
+        A quorum or lottery parameter
+        % \[
+        %   t \in \{1,\dots,n\}.
+        % \]
+        \[
+          t = n\cdot\varphi(1-\alpha).
+        \]
+        Output
+        \[
+          \mathsf{pp} :=(\ppBLS,\mathsf{Eval},\varphi,n,k).
+        \]
+
+  \item $(\sk,\vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:\\
+        Parse $\ppBLS$ from $\pp$, run $\Pi_{\mathsf{BLS}}.\mathsf{KGen}(\ppBLS)$ 
+        \[
+          (\sk,\vk) \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{KGen}(\ppBLS)
+        \]
+        Output $(\sk,\vk)$.
+
+  \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$:\\
+        given
+        \[
+          \mathbf{vk}:=(\vk_1,\dots,\vk_N),
+        \]
+        \[
+          \mathbf{w}:=(w_1,\dots,w_N),
+        \]
+        set
+        \[
+          \mathsf{avk} \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+
+  \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk},\mathbf{vk},\mathbf{w})$, where $b\in\{0,1\}$:\\
+        compute
+        \[
+          \mathsf{avk'} \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+        output b=1 iff $\mathsf{avk}=\mathsf{avk'}$. 
+
+  \item $\sigma' \leftarrow \mathsf{Sig}(\mathsf{pp}, \avk,\vk, w, \mkpth,\sk, j, m)$:\\
+        compute the BLS signature for eligibility check
+        \[
+          \sigma_\topic \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp}, \sk, m.\topic),
+        \]
+        compute the eligibility value
+        \[
+          ev \leftarrow \mathsf{Eval}(\sigma_\topic, j, m.\topic),
+        \]
+        check the validity of $\vk$
+        \[
+            b_1 = \Pi_{\mathsf{MT}}.\mathsf{Check}(\avk,(\vk,w),\mkpth).
+        \]
+        If $b_1 = 1$, check the threshold 
+        % \[
+        %   ev \;<\; \bigl\lfloor \varphi(w)\cdot 2^\lambda \bigr\rfloor.
+        % \]
+        \[
+          ev \;<\; \bigl\lfloor \varphi(w) \cdot 2^\lambda \bigr\rfloor.
+        \]
+        If true, compute the BLS signature
+        \[
+          \sigma \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp}, \sk, m),
+        \]
+        output $\sigma' := (\sigma_\topic, \sigma, j)$. Otherwise output $\bot$.
+
+    \item $b \leftarrow \mathsf{Ver}(\mathsf{pp}, \avk,\vk, w, \mkpth, j, m, \sigma' )$: \\
+    check the validity of $\vk$
+        \[
+            b_1 = \Pi_{\mathsf{MT}}.\mathsf{Check}(\avk,(\vk,w),\mkpth).
+        \]
+        
+    parse $(\sigma_\topic, \sigma, j)$ from $\sigma'$ %todo
+        Verify BLS signature
+        \[
+         b_2 = \Pi_{BLS}.\mathsf{Ver}(\ppBLS, \vk,m_\topic,\sigma_\topic).
+        \]
+        \[
+         b_3 = \Pi_{BLS}.\mathsf{Ver}(\ppBLS, \vk,m,\sigma).
+        \]
+        Compute the eligibility value
+        \[
+          ev \leftarrow \mathsf{Eval}(\sigma_\topic, j, m_\topic),
+        \]
+        and check the threshold
+        \[
+          ev \;<\; \bigl\lfloor \varphi(w) \cdot 2^\lambda \bigr\rfloor.
+        \]
+        If true and $b_1 = 1,b_2 = 1,b_3 = 1$, output 1. Otherwise output 0.
+
+
+
+        \item $\tau \leftarrow \mathsf{ASig}(\mathsf{pp},\avk,  m, \{\vk_{I_\eta}, \sigma'_{I_\eta},w_{I_\eta},p_{I_\eta}\}_{\eta=1}^{t})$:\\
+        Parse $(\sigma,j)$ from each $\sigma'$.
+        For each $I_\eta$, $\eta\in[1,t]$, check $\mathsf{Ver}(\mathsf{pp}, \avk,\vk_{I_\eta}, w_{I_\eta}, \mkpth_{I_\eta}, j, m, \sigma)$. If any returns 0, output $\bot$.
+        
+        Set
+        \[
+          \sigma^\ast \;=\; \prod_{\eta=1}^{t} \sigma_{I_\eta} \;\in\; G_1,
+        \]
+        \[
+          vk^\ast \;=\; \prod_{\eta=1}^{t} \vk_{I_\eta} \;\in\; G_2.
+        \]
+        Compute a seed
+        \[
+          e_\sigma \;\leftarrow\; H\!\bigl(\sigma_1 \,\|\, \cdots \,\|\, \sigma_t \,\bigr),
+        \]
+        and coefficients for $\eta=1,\dots,t$
+        \[
+          \rho_\eta \;\leftarrow\; \mathsf{H_\lambda}(e_\sigma \,\|\, I_\eta) \in \mathbb{Z}_q^\ast.
+        \]
+        Compute the aggregates with seed
+        \[
+          \mu \;=\; \prod_{\eta=1}^{t} \sigma_{I_\eta}^{\rho_\eta} \;\in\; G_1,
+        \]
+        \[
+          ivk \;=\; \prod_{\eta=1}^{t} vk_{I_\eta}^{\rho_\eta} \;\in\; G_2.
+        \]
+        Output
+        \[
+          \tau \;=\; (\,\sigma^\ast,\, vk^\ast,\, \mu,\, ivk,\, e_\sigma,\{(\vk_{I_\eta},w_{I_\eta},p_{I_\eta},\sigma_{I_\eta})\}_{\eta=1}^{t}).
+        \]
+
+  \item $b \leftarrow \mathsf{AVer}(\mathsf{pp}, \mathsf{avk}, m, \tau, t)$, where $b\in\{0,1\}$:\\
+        parse
+        \[
+          \tau=(\sigma^\ast, vk^\ast, \mu, ivk, e_\sigma,\{(\vk_{I_\eta},w_{I_\eta},p_{I_\eta},\sigma_{I_\eta})\}_{\eta=1}^{t}).
+        \]
+        Check that the indices are pairwise distinct.
+        Check that
+        \[
+          e_\sigma = H\!\bigl(\sigma_{I_1}\,\|\,\cdots\,\|\,\sigma_{I_t}\bigr).
+        \]
+        %todo: merkle check
+        Compute
+        \[
+          h \leftarrow H(m).
+        \]
+        Verify the equation
+        \[
+          e(\sigma^\ast, g_2) \;=\; e(h, vk^\ast).
+        \]
+        Recompute the batching coefficients for $\eta=1,\dots,t$
+        \[
+          \rho_\eta \;\leftarrow\; \mathsf{H_\lambda}(e_\sigma \,\|\, I_\eta) \in \mathbb{Z}_q^\ast.
+        \]
+        and the corresponding aggregated public key
+        \[
+          ivk' \;=\; \prod_{\eta=1}^{t} vk_{I_\eta}^{\rho_\eta} \;\in\; G_2.
+        \]
+        Check consistency of the submitted aggregated key
+        \[
+          ivk' \;=\; ivk.
+        \]
+        Verify the batched equation
+        \[
+          e(\mu, g_2) \;=\; e(h, ivk).
+        \]
+        Output
+        \[
+          b \;=\; 1 \text{ iff all checks above hold.}
+        \]
+\end{itemize}
+
+
+\subsubsection{Security Proof}
+
+\begin{theorem}
+Let $n>\log^2\lambda$, where $n\in\mathbb{N}$ be the number of lotteries. Let the quorum threshold be $t :=  n\cdot \varphi(1-\alpha)$, where $\varphi(w) = 1-(1-f)^w.$  If the co-CDH assumption holds, the Mithril scheme described in Sec.~\ref{sec:mithril} is $\alpha$-\textsf{UF-CMA} secure in the random oracle model for $0\leq\alpha<\frac{1}{2}$. 
+\end{theorem}
+
+
+\begin{proof}
+Let $\mathcal{A}$ be a PPT adversary with non-negligible advantage in the $\alpha$-\textsf{UF-CMA} game. We construct a PPT algorithm $\mathcal{S}(\mathcal{A})$ that solves co-CDH problem. The co-CDH challenger samples $(g_1,g_1^a,g_2^b)$ and gives it to $\mathcal{S}$, and $\mathcal{S}$ must output $g_1^{ab}$.
+
+$\mathcal{S}$ first runs $\mathsf{Setup}$ of the scheme. It then fixes an upper bound $N$ on the number of verification keys and chooses a random index $j^\ast \in \{1,\dots,N\}$. For each $i \neq j^\ast$, $\mathcal{S}$ runs $\mathsf{KeyGen}$ and stores each $(\sk_i,\vk_i)$. For the special index $j^\ast$, $\mathcal{S}$ sets $\mathsf{vk}_{j^\ast} := g_2^b$ and stores$(\bot,\vk_i)$. It then assigns a stake vector $w = (w_1,\dots,w_N)$ consistent with the model, with total stake $W = \sum_i w_i$. The public parameters, verification keys and stakes are given to $\mathcal{A}$.
+
+
+
+
+% When $\mathcal{A}$ issues a corruption query on some $\mathsf{vk}_i$ with $i \neq j^\ast$, $\mathcal{S}$ returns $\mathsf{sk}_i$. If $\mathcal{A}$ corrupts $\mathsf{vk}_{j^\ast}$, then $\mathcal{S}$ aborts and start over again. When $\mathcal{A}$ issues a signing query on a message $m$ under $\mathsf{vk}_i$ with $i \neq j^\ast$, $\mathcal{S}$ looks up $H(m)$ via the random oracle and returns the BLS signature $\sigma_i := H(m)^{\mathsf{sk}_i}$. If $\mathcal{A}$ asks for a signature under $\mathsf{vk}_{j^\ast}$ on any message, $\mathcal{S}$ aborts and start over again. 
+% % The view of $\mathcal{A}$ is identical to that in a real $\alpha$-\textsf{UF-CMA} execution except for the abort events.
+
+% When $\mathcal{A}$ issues a signing-oracle query on input $(i,m)$ with $i\neq j^\ast$,
+% $\mathcal{S}$ answers by running the real $\mathsf{Sig}$ algorithm for every lottery index
+% $j\in[n]$ and returning the resulting signature $\sigma_i$.
+
+When $\mathcal{A}$ issues a corruption query on some $\mathsf{vk}_i$ with $i \neq j^\ast$,
+$\mathcal{S}$ returns $\mathsf{sk}_i$. If $\mathcal{A}$ corrupts $\mathsf{vk}_{j^\ast}$,
+then $\mathcal{S}$ aborts.
+
+% \noindent
+\textbf{Random-oracle.} We assume that $\mathcal{A}$ makes at most $q$ distinct queries and $\mathcal{S}$ guesses a random index $q^\ast \in \{1,\dots,q\}$. On the $q^\ast$-th new query on some message $m^\ast$, $\mathcal{S}$ programs the oracle so that $H(m^\ast) = g_1^a$, hoping the message $m^\ast$ will appear in the final forgery. If the final forgery of $\mathcal{A}$ is not on $m^\ast$, $\mathcal{S}$ aborts. 
+
+$\mathcal{S}$ maintains a table $\mathbf{T}$ initially empty.
+For each hash-to-curve query on a message $m$, $\mathcal{S}$ consults the table $\mathbf{T}$. If $m \in \mathbf{T}$, then $\mathcal{S}$ returns the stored value. Otherwise, $\mathcal{S}$ increments a counter $c$ and defines $H(m)$ by setting $H(m)=g_1^a$ if $c=q^\ast$. Otherwise, sample a uniformaly random $s \in \mathbb{Z}_q$, set $H(m) \leftarrow g_1^s$. It then stores the pair $(m,H(m),s)$ in $\mathbf{T}$ and returns $H(m)$.
+
+
+% \noindent
+\textbf{Signing-oracle.}
+When $\mathcal{A}$ issues a signing query on input $(i,m)$, $\mathcal{S}$ proceeds as follows. If $i=j^\ast$ and $m = m^*$, then $\mathcal{S}$ aborts. If $i=j^\ast$ and $m \ne m^*$, return $\sigma = (g_2^b)^s$ .Otherwise, $\mathcal{S}$ first ensures that the random oracle value $H(m)$ is defined by answering the hash-to-curve oracle on input $m$ if needed, and then returns the standard BLS signature $\sigma_i \;:=\; H(m)^{\mathsf{sk}_i}$.
+% In particular, when $m=m^\ast$, we have $H(m)=g_1^a$ by programming, and hence $\sigma_i=(g_1^a)^{\mathsf{sk}_i}$.
+
+
+
+% For the hash to curve query $H(m)$, we assume that $\mathcal{A}$ makes at most $q$ distinct queries and $\mathcal{S}$ guesses a random index $q^\ast \in \{1,\dots,q\}$. On the $q^\ast$-th new query on some message $m^\ast$, $\mathcal{S}$ programs the oracle so that $H(m^\ast) = g_1^a$, hoping the message $m^\ast$ will appear in the final forgery. If the final forgery of $\mathcal{A}$ is not on $m^\ast$, $\mathcal{S}$ aborts.
+
+
+Eventually $\mathcal{A}$ outputs a forgery consisting of a message $m^\ast$, a set of signers and stakes, and an aggregate signature $\sigma^\ast$ that verifies correctly under the aggregate verification key and satisfies that the total underlying stake is strictly larger than $\alpha W$, while the total stake of corrupted or oracle-used keys is smaller than  $\alpha W$. 
+% Hence some honest verification key contributes to $\sigma^\ast$ without having been used in a signing query on $m^\ast$. With probability at least $1/\mathrm{poly}(\lambda)$ over the choice of $j^\ast$ and the internal randomness of $\mathcal{A}$, this honest key is exactly $\mathsf{vk}_{j^\ast}$.
+
+By Lemma~1, the probability that $\mathcal{A}$ can reach the quorum threshold using only corrupted keys and oracle outputs without forging any new signature share is negligible, so any successful adversary must forge at least one signature share on $m^\ast$ except with negligible probability.
+
+Let $S:=\{I_\eta\}_{\eta=1}^t$ denote the set of indices of signers underlying the forgery. The aggregation in the scheme is multiplicative in $G_1$, so $\sigma^\ast = \prod_{i \in S} H(m^\ast)^{\mathsf{sk}_i} = H(m^\ast)^{\sum_{i \in S} \mathsf{sk}_i}$. Using the known $\mathsf{sk}_i$ for all $i \in S \setminus \{j^\ast\}$, $\mathcal{S}$ computes $\sigma_{\text{others}} := \prod_{i \in S \setminus \{j^\ast\}} H(m^\ast)^{\mathsf{sk}_i}$ and then derives the individual signature of the special key as $\sigma_{j^\ast} := \sigma^\ast \cdot (\sigma_{\text{others}})^{-1} = H(m^\ast)^{\mathsf{sk}_{j^\ast}}$. By the programming of the random oracle, $H(m^\ast) = g_1^a$, and by the embedding, $\mathsf{vk}_{j^\ast} = g_2^b$, so $\sigma_{j^\ast} = (g_1^a)^b = g_1^{ab}$. $\mathcal{S}$ outputs $\sigma_{j^\ast}$ as its answer to the co-CDH challenge.
+
+Simulating the hash-to-curve queries $H(m)$ made by $\mathcal{A}$ is polynomial. The numbers of corruption and signing queries are also bounded by a polynomial in $\lambda$. Finally, extracting $\sigma_{j^\ast}$ from $\sigma^\ast$ and computing the corresponding product and inverse in $G_1$ take polynomial time as well. Hence the running time of $\mathcal{S}$ is polynomial in $\lambda$.
+
+
+If $\mathcal{A}$ wins the $\alpha$-\textsf{UF-CMA} game with non-negligible probability, then $\mathcal{S}$ solves co-CDH with non-negligible probability, contradicting the co-CDH assumption. Therefore, the scheme is $\alpha$-\textsf{UF-CMA} secure.
+\end{proof}
+
+% todo: 感觉缺个概率的分析，abort的概率和真的伪造到j*位置的概率
+
+% \begin{l}
+\noindent
+\textbf{Lemma 1.}
+Let $\alpha \in [0,\tfrac12)$ be the adversarial stake fraction and let $n>\log^2\lambda$, where $n\in\mathbb{N}$ be the number of lotteries. Let the quorum threshold be $t :=  n\cdot \varphi(1-\alpha)$, where $\varphi(w) = 1-(1-f)^w.$ 
+Let $W_{\mathcal{A}}$ denotes the number of lotteries won by the adversary, we have  
+\[
+\Pr\big[W_{\mathcal{A}} \ge t\big] \le \mathsf{negl}(\lambda) \enspace.
+\]
+% \end{theorem}
+
+\begin{proof}
+Define variable $X_\ell\in\{0,1\}$ which indicates the event that the adversary wins lottery $\ell$ for each $\ell\in[n]$. By assumption, the random variables $\{X_\ell\}_{\ell=1}^n$ are independent and satisfy $\Pr[X_\ell=1]\le \varphi(\alpha)$. Thus, the total number of wins $W_{\mathcal{A}}=\sum_{\ell=1}^n X_\ell$ can be bounded by a binomial distribution $\mathrm{Bin}(n,p)$ where $p:=\varphi(\alpha)$.
+
+Let $\mu := \mathrm{E}[W_{\mathcal{A}}]=np=n\varphi(\alpha)$. Since $\alpha<\tfrac12$ and $\varphi$ is increasing, we have $\varphi(1-\alpha)>\varphi(\alpha)$, and thus $t>\mu$. Define $\delta := \frac{t}{\mu}-1 = \frac{\varphi(1-\alpha)}{\varphi(\alpha)}-1>0$. Applying the multiplicative Chernoff bound, we obtain
+\[
+\Pr\big[W_{\mathcal{A}} \ge (1+\delta)\mu\big] \le \exp\!\left(-\frac{\mu\delta^2}{2+\delta}\right).
+\]
+Substituting $\mu=n\varphi(\alpha)$ gives
+\[
+\Pr\big[W_{\mathcal{A}} \ge t\big] \le \exp\!\left(-n\cdot \frac{\varphi(\alpha)\delta^2}{2+\delta}\right).
+\]
+Let $c := \frac{\varphi(\alpha)\delta^2}{2+\delta}$, so $c>0$ and does not depend on $\lambda$. Then $\Pr[W_{\mathcal{A}} \ge t] \le \exp(-cn)$. For $n>\log^2\lambda$, we get
+\[
+\Pr\big[W_{\mathcal{A}} \ge t\big] \le \exp(-c\log^2\lambda)=\lambda^{-c\log\lambda}.
+\]
+Therefore $\Pr[W_{\mathcal{A}}\ge t]$ is negligible in $\lambda$.
+\end{proof}
+
+
+\subsubsection{SNARK-based Mithril}\label{sec:snark-mithril}
+
+We write the SNARK-based Mithril scheme as
+\[
+  \Pi_{\mathsf{SNARK\text{-}Mithril}} := (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck}, \mathsf{Sig}, \mathsf{ASig}, \mathsf{AVer}).
+\]
+It follows the same message structure $m=(m.\topic,m.\mathsf{body})$ as in Sec.~\ref{sec:mithril}.
+
+\begin{itemize}
+
+  \item $\pp \leftarrow \mathsf{Setup}(1^\lambda)$:\\
+        run $\Pi_{\mathsf{BLS}}.\mathsf{Setup}(1^\lambda)$ to obtain $\ppBLS := (q,G_1,G_2,G_T,g_1,g_2,e,H)$, and fix the functions $\mathsf{Eval}$ and $\varphi$ and the lottery parameter $n$ as in Sec.~\ref{sec:mithril}. 
+        % Fix a hash $\mathsf{H_\lambda}:\{0,1\}^*\to\mathbb{Z}_q^\ast$ and a seed hash $\mathsf{H_{seed}}:G_1^*\to\{0,1\}^\lambda$. 
+        Define the aggregation relation $\mathcal{R}_{\mathsf{agg}}$ (see eq.~\ref{R_agg}, below), and run
+        \[
+          \ppSNARK \leftarrow \Pi_{\mathsf{SNARK}}.\mathsf{Setup}(1^\lambda,\mathcal{R}_{\mathsf{agg}}).
+        \]
+        Output
+        \[
+          \pp := (\ppBLS,\ppSNARK,\mathsf{Eval},\varphi,\mathsf{H_\lambda},\mathsf{H_{seed}},n,t).
+        \]
+\item $(\sk,\vk) \leftarrow \mathsf{KGen}(\mathsf{pp})$:\\
+        Parse $\ppBLS$ from $\pp$, run $\Pi_{\mathsf{BLS}}.\mathsf{KGen}(\ppBLS)$ 
+        \[
+          (\sk,\vk) \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{KGen}(\ppBLS)
+        \]
+        Output $(\sk,\vk)$.
+
+  \item $\mathsf{avk} \leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$:\\
+        given
+        \[
+          \mathbf{vk}:=(\vk_1,\dots,\vk_N),
+        \]
+        \[
+          \mathbf{w}:=(w_1,\dots,w_N),
+        \]
+        set
+        \[
+          \mathsf{avk} \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+
+  \item $b \leftarrow \mathsf{ACheck}(\mathsf{avk},\mathbf{vk},\mathbf{w})$, where $b\in\{0,1\}$:\\
+        compute
+        \[
+          \mathsf{avk'} \leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}(\mathbf{vk},\mathbf{w}).
+        \]
+        output b=1 iff $\mathsf{avk}=\mathsf{avk'}$. 
+
+  \item $\sigma' \leftarrow \mathsf{Sig}(\mathsf{pp}, \avk,\vk, w, \mkpth,\sk, j, m)$:\\
+        compute the BLS signature for eligibility check
+        \[
+          \sigma_\topic \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp}, \sk, m.\topic),
+        \]
+        compute the eligibility value
+        \[
+          ev \leftarrow \mathsf{Eval}(\sigma_\topic, j, m.\topic),
+        \]
+        check the validity of $\vk$
+        \[
+            b_1 = \Pi_{\mathsf{MT}}.\mathsf{Check}(\avk,(\vk,w),\mkpth).
+        \]
+        If $b_1 = 1$, check the threshold 
+        % \[
+        %   ev \;<\; \bigl\lfloor \varphi(w)\cdot 2^\lambda \bigr\rfloor.
+        % \]
+        \[
+          ev \;<\; \bigl\lfloor \varphi(w) \cdot 2^\lambda \bigr\rfloor.
+        \]
+        If true, compute the BLS signature
+        \[
+          \sigma \leftarrow \Pi_{\mathsf{BLS}}.\mathsf{Sign}(\mathsf{pp}, \sk, m),
+        \]
+        output $\sigma' := (\sigma_\topic, \sigma, j)$. Otherwise output $\bot$.
+
+    \item $b \leftarrow \mathsf{Ver}(\mathsf{pp}, \avk,\vk, w, \mkpth, j, m, \sigma' )$: \\
+    check the validity of $\vk$
+        \[
+            b_1 = \Pi_{\mathsf{MT}}.\mathsf{Check}(\avk,(\vk,w),\mkpth).
+        \]
+        
+    parse $(\sigma_\topic, \sigma, j)$ from $\sigma'$ %todo
+        Verify BLS signature
+        \[
+         b_2 = \Pi_{BLS}.\mathsf{Ver}(\ppBLS, \vk,m_\topic,\sigma_\topic).
+        \]
+        \[
+         b_3 = \Pi_{BLS}.\mathsf{Ver}(\ppBLS, \vk,m,\sigma).
+        \]
+        Compute the eligibility value
+        \[
+          ev \leftarrow \mathsf{Eval}(\sigma_\topic, j, m_\topic),
+        \]
+        and check the threshold
+        \[
+          ev \;<\; \bigl\lfloor \varphi(w) \cdot 2^\lambda \bigr\rfloor.
+        \]
+        If true and $b_1 = 1,b_2 = 1,b_3 = 1$, output 1. Otherwise output 0.
+
+  \item $\tau \leftarrow \mathsf{ASig}(\pp,\mathsf{avk}, m, \{(\sigma'_{I_\eta},p_{I_\eta})\}_{\eta=1}^{t})$:\\
+        parse $\ppBLS,\ppSNARK,\mathsf{Eval},\varphi,\mathsf{H_\lambda},\mathsf{H_{seed}}$ from $\pp$. For each $\eta\in[t]$, parse $\sigma'_{I_\eta}=(\sigma_{\topic,I_\eta},\sigma_{I_\eta},j_\eta)$. Compute
+        \[
+          e_\sigma \leftarrow \mathsf{H_{seed}}(\sigma_{I_1}\,\|\,\cdots\,\|\,\sigma_{I_t}) \in \{0,1\}^\lambda,\qquad
+          \rho_\eta \leftarrow \mathsf{H_\lambda}(e_\sigma \,\|\, I_\eta)\in\mathbb{Z}_q^\ast,
+        \]
+        and set
+        \[
+          \mu := \prod_{\eta=1}^{t} \sigma_{I_\eta}^{\rho_\eta} \in G_1,\qquad
+          ivk := \prod_{\eta=1}^{t} vk_{I_\eta}^{\rho_\eta} \in G_2.
+        \]
+        Let the statement be $x:=(\mathsf{avk},m,\mu,ivk,e_\sigma)$ and the witness be
+        \[
+          w := \bigl(\{(I_\eta, vk_{I_\eta}, w_{I_\eta}, p_{I_\eta}, \sigma_{\topic,I_\eta}, \sigma_{I_\eta}, j_\eta)\}_{\eta=1}^{t}\bigr).
+        \]
+        % Define $\mathcal{R}_{\mathsf{agg}}$ %todo
+        % \begin{equation}
+        %     \mathcal{R}_{\mathsf{agg}} = \{(x,w)\  |\  \Pi_{\mathsf{MT}}.\mathsf{Check}(\mathsf{avk}, (vk_{I_\eta},w_{I_\eta}), p_{I_\eta})=1 \label{R_agg}
+        % \end{equation}
+        % \[
+        % \land \Pi_{\mathsf{BLS}}.\mathsf{Ver}(\ppBLS, vk_{I_\eta}, m.\topic, \sigma_{\topic,I_\eta})=1 
+        % \]
+        % \[
+        % \land \Pi_{\mathsf{BLS}}.\mathsf{Ver}(\ppBLS, vk_{I_\eta}, m, \sigma_{I_\eta})=1 
+        % \]
+        % \[
+        % \land  \mathsf{Eval}(\sigma_{\topic,I_\eta}, j_\eta, m.\topic) \;<\; \bigl\lfloor \varphi(w_{I_\eta})\cdot 2^\lambda \bigr\rfloor 
+        % \]
+        % \[
+        % \land \mu = \prod_{\eta=1}^{t} \sigma_{I_\eta}^{\rho_\eta} \land
+        %   ivk = \prod_{\eta=1}^{t} vk_{I_\eta}^{\rho_\eta} \}
+        % \] 
+        Define $\mathcal{R}_{\mathsf{agg}}$ as
+        \begin{equation}\label{R_agg}
+        \begin{aligned}
+            \mathcal{R}_{\mathsf{agg}} = \{(x,w)\  |\  & \Pi_{\mathsf{MT}}.\mathsf{Check}(\mathsf{avk}, (vk_{I_\eta},w_{I_\eta}), p_{I_\eta})=1 \\
+            \land\ & \Pi_{\mathsf{BLS}}.\mathsf{Ver}(\ppBLS, vk_{I_\eta}, m.\topic, \sigma_{\topic,I_\eta})=1 \\
+            \land\ & \Pi_{\mathsf{BLS}}.\mathsf{Ver}(\ppBLS, vk_{I_\eta}, m, \sigma_{I_\eta})=1 \\
+            \land\ & \mathsf{Eval}(\sigma_{\topic,I_\eta}, j_\eta, m.\topic) \;<\; \bigl\lfloor \varphi(w_{I_\eta})\cdot 2^\lambda \bigr\rfloor \\
+            \land\ & \mu = \prod_{\eta=1}^{t} \sigma_{I_\eta}^{\rho_\eta} \land
+              ivk = \prod_{\eta=1}^{t} vk_{I_\eta}^{\rho_\eta} \}
+        \end{aligned}
+        \end{equation}
+        
+        % as the set of pairs $(x,w)$ such that the indices $I_1,\dots,I_t$ are pairwise distinct and, for every $\eta\in[t]$,
+        % \[
+        %   \Pi_{\mathsf{MT}}.\mathsf{Check}(\mathsf{avk}, (vk_{I_\eta},w_{I_\eta}), p_{I_\eta})=1,
+        % \]
+        % \[
+        %   \Pi_{\mathsf{BLS}}.\mathsf{Ver}(\ppBLS, vk_{I_\eta}, m.\topic, \sigma_{\topic,I_\eta})=1,\qquad
+        %   \Pi_{\mathsf{BLS}}.\mathsf{Ver}(\ppBLS, vk_{I_\eta}, m, \sigma_{I_\eta})=1,
+        % \]
+        % \[
+        %   \mathsf{Eval}(\sigma_{\topic,I_\eta}, j_\eta, m.\topic) \;<\; \bigl\lfloor \varphi(w_{I_\eta})\cdot 2^\lambda \bigr\rfloor,
+        % \]
+        % and $\mu,ivk,e_\sigma$ are consistent with the equations above. 
+        
+        Compute
+        \[
+          \pi \leftarrow \Pi_{\mathsf{SNARK}}.\mathsf{Prove}(\ppSNARK, x, w),
+        \]
+        and output
+        \[
+          \tau := (\mu, ivk, e_\sigma, \pi).
+        \]
+
+  \item $b \leftarrow \mathsf{AVer}(\pp,\mathsf{avk}, m, \tau)$, where $b\in\{0,1\}$:\\
+        parse $\ppBLS,\ppSNARK$ from $\pp$ and parse $\tau=(\mu,ivk,e_\sigma,\pi)$. Set $h\leftarrow H(m)$ and check
+        \[
+          e(\mu,g_2)=e(h,ivk),
+        \]
+        and
+        \[
+          \Pi_{\mathsf{SNARK}}.\mathsf{Verify}(\ppSNARK, (\mathsf{avk},m,\mu,ivk,e_\sigma), \pi)=1.
+        \]
+        Output $b=1$ iff both checks hold.
+
+\end{itemize}
+
+\subsubsection{Security Proof}
+\begin{theorem}
+Let $\alpha\in[0,\tfrac12)$ and $n>\log^2\lambda$, where $n\in\mathbb{N}$ be the number of lotteries. Let the quorum threshold be $t :=  n\cdot \varphi(1-\alpha)$, where $\varphi(w) = 1-(1-f)^w.$ 
+If co-\textsf{CDH} and extractability of SNARK holds, $\Pi_{\mathsf{SNARK\text{-}Mithril}}$ is $\alpha$-\textsf{UF-CMA} secure in the random oracle model.
+\end{theorem}
+
+\begin{proof}
+Let $\mathcal{A}$ be a PPT adversary that wins the $\alpha$-\textsf{UF-CMA} experiment against $\Pi_{\mathsf{SNARK\text{-}Mithril}}$ with non-negligible probability. We construct a PPT algorithm $\mathcal{S}(\mathcal{A})$ that, given a co-\textsf{CDH} challenge $(g_1,g_1^{a},g_2^{b})$, outputs $g_1^{ab}$ with non-negligible probability.
+
+$\mathcal{S}$ runs $\mathsf{Setup}$ and uses the bilinear groups and generators from the challenge as the BLS public parameters. As in the previous security proof, $\mathcal{S}$ samples a uniform special index $j^\ast \getsr [N]$ and embeds the co-\textsf{CDH} instance by setting $\vk_{j^\ast}:=g_2^{b}$ while generating all other keys honestly: for each $i\neq j^\ast$, sample $\sk_i\getsr\mathbb{Z}_q$ and set $\vk_i:=g_2^{\sk_i}$. 
+% It then provides $(\pp,\mathbf{vk},n,t)$ to $\mathcal{A}$ and answers all oracle queries in the $\alpha$-\textsf{UF-CMA} experiment, with aborts only when $\mathcal{A}$ forces $\mathcal{S}$ to reveal or use $\sk_{j^\ast}$.
+
+$\mathcal{S}$ simulates the random oracle $H:\{0,1\}^\ast\to G_1$ via  sampling with a table $\mathbf{T}_H$, and guesses a uniform index $q^\ast\in\{1,\dots,q\}$, where $q$ upper-bounds the number of distinct $H$-queries made by $\mathcal{A}$. It maintains a counter $\ctr$ initially $0$. On a fresh query $H(m)$, it increments $\ctr$ and programs the oracle at the guessed position by setting $H(m)=g_1^{a}$ if $\ctr=q^\ast$, and otherwise samples $s\getsr\mathbb{Z}_q$ and returns $H(m):=g_1^{s}$. Let $m^\dagger$ denote the unique message at which $H$ was programmed to $g_1^{a}$, i.e., the $q^\ast$-th new query.
+
+$\mathcal{S}$ answers $\mathsf{H_\lambda}$ and $\mathsf{H_{seed}}$ as random oracles by sampling with tables, without any programming. For corruption and key-substitution queries, $\mathcal{S}$ answers honestly for all $i\neq j^\ast$, and aborts if $\mathcal{A}$ corrupts $j^\ast$ or substitutes $\mathbf{vk}[j^\ast]$, since this would destroy the embedding $\vk_{j^\ast}=g_2^{b}$. For signing-oracle queries, $\mathcal{S}$ answers honestly for all $i\neq j^\ast$ by computing the required BLS signatures using $\sk_i$. If $\mathcal{A}$ requests a signing query for $i=j^\ast$, $\mathcal{S}$ aborts, since it cannot sign under $\vk_{j^\ast}$.
+
+Eventually $\mathcal{A}$ outputs a forgery $(\avk^\ast,\mathbf{vk}^\ast,m^\ast,\tau^\ast)$, where $\tau^\ast=(\mu^\ast,ivk^\ast,e_\sigma^\ast,\pi^\ast)$ is accepted by $\mathsf{AVer}$ for $(\pp,\avk^\ast,m^\ast)$. If $m^\ast\neq m^\dagger$, then $\mathcal{S}$ aborts. Otherwise, by acceptance we have $\Pi_{\mathsf{SNARK}}.\mathsf{Verify}(\ppSNARK,x^\ast,\pi^\ast)=1$ for the statement $x^\ast:=(\avk^\ast,m^\ast,\mu^\ast,ivk^\ast,e_\sigma^\ast)$.
+
+By SNARK extractability, $\mathcal{S}$ invokes the extractor to obtain a witness $w^\ast$ such that $(x^\ast,w^\ast)\in\mathcal{R}_{\mathsf{agg}}$, where $w^\ast$ contains tuples $(I_\eta,vk_{I_\eta},w_{I_\eta},p_{I_\eta},\sigma_{\topic,I_\eta},\sigma_{I_\eta},j_\eta)_{\eta=1}^{t}$ that satisfy all checks encoded by $\mathcal{R}_{\mathsf{agg}}$ and are consistent with the aggregation equations under coefficients $\rho_\eta:=\mathsf{H_\lambda}(e_\sigma^\ast\|I_\eta)$. Let $S:=\{I_\eta\}_{\eta=1}^{t}$ be the extracted signer-index multiset. By the same lottery argument used in the previous proof under the threshold choice $t=n\cdot\varphi(1-\alpha)$, except with negligible probability there exists at least one extracted index in $S\setminus \mathcal{C}^\ast$, and since $j^\ast$ is uniform in $[N]$ we have $\Pr[j^\ast\in S\setminus \mathcal{C}^\ast]\ge 1/N$. Condition on the event that $j^\ast\in S\setminus \mathcal{C}^\ast$.
+
+Now $\mathcal{S}$ recomputes all coefficients $\rho_\eta$ using its simulation of $\mathsf{H_\lambda}$, computes $\mu_{\mathrm{others}}:=\prod_{\eta:\ I_\eta\neq j^\ast}\sigma_{I_\eta}^{\rho_\eta}$, isolates $\mu_{j^\ast}:=\mu^\ast\cdot \mu_{\mathrm{others}}^{-1}$, and obtains $\sigma_{j^\ast}:=(\mu_{j^\ast})^{\rho_{j^\ast}^{-1}}$, where $\rho_{j^\ast}$ is the coefficient associated with the index $j^\ast$ in the extracted witness. Since $(x^\ast,w^\ast)\in\mathcal{R}_{\mathsf{agg}}$, the element $\sigma_{j^\ast}$ is a valid BLS signature on $m^\ast$ under $\vk_{j^\ast}=g_2^{b}$, hence $\sigma_{j^\ast}=H(m^\ast)^{b}$. By our programming we have $H(m^\ast)=H(m^\dagger)=g_1^{a}$, and therefore $\sigma_{j^\ast}=(g_1^{a})^{b}=g_1^{ab}$, which $\mathcal{S}$ outputs as the co-\textsf{CDH} solution.
+
+It remains to bound the abort probability. $\mathcal{S}$ aborts only if $\mathcal{A}$ corrupts or substitutes $j^\ast$, or requests a signing query for $j^\ast$, or if $\mathcal{S}$ guesses the wrong $H$-query to program (i.e., $m^\ast\neq m^\dagger$), or if SNARK extraction fails (negligible by assumption). Since $j^\ast$ and $q^\ast$ are guessed uniformly and all bounds are polynomial, $\mathcal{S}$ succeeds with probability at least $\Pr[\mathcal{A}\ \mathsf{wins}]/\mathsf{poly}(\lambda)-\negl(\lambda)$. Thus any non-negligible forging probability of $\mathcal{A}$ would imply a non-negligible success probability for $\mathcal{S}$ in solving co-\textsf{CDH}, contradicting the co-\textsf{CDH} assumption. Hence $\Pi_{\mathsf{SNARK\text{-}Mithril}}$ is $\alpha$-\textsf{UF-CMA} secure.
+\end{proof}
+
+
+
+
+\subsubsection{Schnorr's Mithril}\label{sec:schnorr-mithril}
+
+\[
+  \Pi_{\mathsf{Sch\text{-}Mithril}} := (\mathsf{Setup}, \mathsf{KGen}, \mathsf{AKey}, \mathsf{ACheck}, \mathsf{Sig}, \mathsf{Ver}, \mathsf{ASig}, \mathsf{AVer}).
+\]
+\[
+  m=(m.\topic,m.\mathsf{body})\in\mathcal{M}.
+\]
+
+\begin{itemize}
+
+  \item $\pp \leftarrow \mathsf{Setup}(1^\lambda)$:
+        \[
+          (q,G_1,g_1)\ \text{with}\ |G_1|=q,
+        \]
+        \[
+          H_1:\{0,1\}^\ast\to G_1,\qquad H_2:G_1^*\to \mathbb{Z}_q,
+        \]
+        \[
+          \mathsf{Eval}:G_1\times\mathbb{N}\times\mathcal{M}\to\{0,1\}^\lambda,
+        \]
+        \[
+          \varphi:[0,1]\to[0,1],
+        \]
+        \[
+          n\in\mathbb{N},\qquad n>\log^2\lambda,
+        \]
+        \[
+          t=n\cdot\varphi(1-\alpha),
+        \]
+        \[
+          \pp:=(q,G_1,g_1,H_1,H_2,\mathsf{Eval},\varphi,n,t).
+        \]
+
+  \item $(\sk,\vk)\leftarrow \mathsf{KGen}(\pp)$:
+        \[
+          \sk\getsr \mathbb{Z}_q,\qquad \vk:=g_1^{\sk}\in G_1.
+        \]
+
+  \item $\avk\leftarrow \mathsf{AKey}(\mathbf{vk},\mathbf{w})$:
+        \[
+          \avk\leftarrow \Pi_{\mathsf{MT}}.\mathsf{Create}\bigl(\{(\vk_i,w_i)\}_{i=1}^{N}\bigr).
+        \]
+
+  \item $b\leftarrow \mathsf{ACheck}(\avk,\mathbf{vk},\mathbf{w})$:
+        \[
+          \avk':=\Pi_{\mathsf{MT}}.\mathsf{Create}\bigl(\{(\vk_i,w_i)\}_{i=1}^{N}\bigr),
+        \qquad
+          b:=\mathbf{1}[\avk=\avk'].
+        \]
+
+  \item $\sigma' \leftarrow \mathsf{Sig}(\pp,\avk,\vk,w,\mkpth,\sk,j,m)$:
+        \[
+          b_1:=\Pi_{\mathsf{MT}}.\mathsf{Check}(\avk,(\vk,w),\mkpth),
+        \]
+        \[
+          \sigma_\topic := H_1(m.\topic)^{\sk},
+          ev:=\mathsf{Eval}(\sigma_\topic,j,m.\topic),
+          b_2:= (ev<\bigl\lfloor \varphi(w)\cdot 2^\lambda\bigr\rfloor),
+        \]
+        \[
+          \sigma := H_1(m)^{\sk},
+          r\getsr \mathbb{Z}_q,
+          R_{1}:=H_1(m)^{r},
+          R_{2}:=g_1^{r},
+        \]
+        \[
+          c := H_2(g_1,H_1(m),\vk,\sigma,R_{1},R_{2}),
+          s := r + \sk\cdot c\ \in\mathbb{Z}_q,
+          \pi:=(s,c),
+        \]
+        \[
+          \sigma':=(\sigma_\topic,\sigma,\pi,j,R_1,R_2),
+          \sigma':=\bot\ \text{if}\ b_1=0\ \text{or}\ b_2=0.
+        \]
+
+  \item $b\leftarrow \mathsf{Ver}(\pp,\avk,\vk,w,\mkpth,j,m,\sigma')$:
+        parse $(\sigma_\topic,\sigma,(s,c),j,R_1,R_2)$ from $\sigma'$,
+        \[b_1 := \Pi_{\mathsf{MT}}.\mathsf{Check}(\avk,(\vk,w),\mkpth),
+        \]
+        \[
+          ev:=\mathsf{Eval}(\sigma_\topic,j,m.\topic),
+        \qquad
+          b_1 :=\mathbf{1}\!\left[ev<\bigl\lfloor \varphi(w)\cdot 2^\lambda\bigr\rfloor\right],
+        \]
+        \[
+          \widetilde{R}_{1}:=H_1(m)^{s}\cdot \sigma^{-c},
+        \qquad
+          \widetilde{R}_{2}:=g_1^{s}\cdot \vk^{-c},
+        \]
+        \[
+          \widetilde{c}:=H_2(g_1,H_1(m),\vk,\sigma,\widetilde{R}_{1},\widetilde{R}_{2}),
+        \qquad
+          b_{\mathsf{msg}}:=\mathbf{1}[c=\widetilde{c}],
+        \]
+        \[
+          b:=\mathbf{1}[b_1=1\land b_2=1\land b_{\topic}=1\land b_{\mathsf{msg}}=1].
+        \]
+
+  \item $\tau \leftarrow \mathsf{ASig}(\pp,\avk,m,\{(\vk_{I_\eta},w_{I_\eta},p_{I_\eta},\sigma'_{I_\eta})\}_{\eta=1}^{t})$:
+        \[
+          \rho := H_2(c_1,...,c_t,s_1,...,s_t),
+        \]
+        \[ \text{for}\ 1\leq \eta \leq t,\quad a_{\eta ,0} := H_3(\rho,\eta,0),\quad a_{\eta,1} := H_3(\rho,\eta,1) \]
+        \[\sigma^* := \prod_{\eta=1}^{t} \sigma_{I_\eta}^{c_\eta a_{\eta,0}} \in G_1,\qquad
+          ivk := \prod_{\eta=1}^{t} vk_{I_\eta}^{c_\eta a_{\eta,1}} \in G_1,
+          \]
+        \[
+          R_1^* := \prod_{\eta=1}^{t} R_{1,I_\eta}^{c_\eta a_{\eta,0}} \in G_1,\qquad
+          R_2^* := \prod_{\eta=1}^{t} R_{2,I_\eta}^{c_\eta  a_{\eta,1}} \in G_1,
+        \]
+        \[
+        H_1(msg)^* := H_1(msg)^{\sum_{\eta=1}^{t} c_\eta a_{\eta,0}},\qquad
+        g^*_1 := g_1^{\sum_{\eta=1}^{t} c_\eta a_{\eta,1}},
+        \]
+        \[
+        \tau := (\sigma^*, ivk, R_1^*, R_2^*, H_1(msg)^*, g_1^*).
+        \]
+  \item $b \leftarrow \mathsf{AVer}(\pp,\avk,m,\tau,t)$:
+        parse $(\sigma^*, ivk, R_1^*, R_2^*, H_1(msg)^*, g_1^*)$ from $\tau$,
+        \[
+          R_1^* R_2^* \sigma^* ivk = H_1(msg)^* g_1^*.
+        \]
+
+\end{itemize}
+
+% \subsubsection{Security Proof}
+
+% \begin{theorem}
+% Let $\alpha\in[0,\tfrac12)$ and $n>\log^2\lambda$, where $n\in\mathbb{N}$ is the number of lotteries and the quorum threshold is $t:=n\cdot\varphi(1-\alpha)$. If the \textsf{CDH} assumption holds in $G_1$, then $\Pi_{\mathsf{Sch\text{-}Mithril}}$ is $\alpha$-\textsf{UF-CMA} secure in the random oracle model.
+% \end{theorem}
+
+% \begin{proof}
+% Let $\mathcal{A}$ be a PPT adversary that wins the $\alpha$-\textsf{UF-CMA} experiment against $\Pi_{\mathsf{Sch\text{-}Mithril}}$ with non-negligible probability. We construct a PPT algorithm $\mathcal{S}(\mathcal{A})$ that, given a \textsf{CDH} challenge $(g_1,g_1^{a},g_1^{b})$, outputs $g_1^{ab}$ with non-negligible probability.
+% \end{proof}
+
+\end{document}
